@@ -27,6 +27,7 @@ on:
           - bold-poster
           - pentagram-stat
           - light-pro
+          - random
       voice:
         description: 'Edge-TTS Voice ID'
         required: false

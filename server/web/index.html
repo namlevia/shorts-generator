@@ -336,6 +336,263 @@
       width: 100%;
     }
 
+    /* CHANNEL CHIPS (STUDIO TAB) */
+    .channel-chips-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .channel-chip {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      user-select: none;
+    }
+
+    .channel-chip:hover {
+      background: rgba(30, 41, 59, 0.85);
+      border-color: rgba(34, 211, 238, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .channel-chip.selected {
+      background: rgba(34, 211, 238, 0.12);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 16px rgba(34, 211, 238, 0.25);
+    }
+
+    .channel-chip-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      flex-shrink: 0;
+      background: #1e293b;
+    }
+
+    .channel-chip-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .channel-chip-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-chip-handle {
+      font-size: 11px;
+      color: var(--accent-cyan);
+      font-family: 'Space Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .channel-chip-check {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1.5px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: transparent;
+      transition: all 0.18s;
+      flex-shrink: 0;
+    }
+
+    .channel-chip.selected .channel-chip-check {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      color: #070a13;
+      font-weight: 900;
+    }
+
+    .channel-tool-btn {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .channel-tool-btn:hover {
+      background: rgba(34, 211, 238, 0.15);
+      border-color: rgba(34, 211, 238, 0.4);
+      color: #fff;
+    }
+
+    /* CHANNEL BADGE IN QUEUE TABLE */
+    .channel-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(124, 58, 237, 0.16);
+      border: 1px solid rgba(124, 58, 237, 0.35);
+      color: #c4b5fd;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 5px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .channel-badge img {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    /* CHANNEL PROFILES IN SETTINGS TAB */
+    .channel-profiles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .channel-profile-card {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      transition: all 0.2s;
+    }
+
+    .channel-profile-card:hover {
+      border-color: rgba(34, 211, 238, 0.35);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .cp-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .cp-avatar-wrap {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      cursor: pointer;
+      border: 2px solid var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+      background: #1e293b;
+    }
+
+    .cp-avatar-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .cp-avatar-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.2s;
+      text-align: center;
+      padding: 4px;
+    }
+
+    .cp-avatar-wrap:hover .cp-avatar-overlay {
+      opacity: 1;
+    }
+
+    .cp-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .cp-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cp-badge-default {
+      font-size: 10px;
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #10b981;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    .cp-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .cp-fields .form-group {
+      margin-bottom: 0;
+    }
+
+    .cp-fields label {
+      font-size: 11px;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+
+    .cp-fields input, .cp-fields select {
+      padding: 8px 10px;
+      font-size: 13px;
+      border-radius: 8px;
+    }
+
+    .cp-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 4px;
+      align-items: center;
+    }
+
     .btn-submit {
       width: 100%;
       padding: 16px 24px;
@@ -813,6 +1070,23 @@
             <input type="text" id="input-url" data-i18n-placeholder="studio.urlPlaceholder" placeholder="https://github.com/dabeecao/telecloud-go" required>
           </div>
 
+          <!-- TARGET CHANNELS SELECTOR -->
+          <div class="form-group" style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label data-i18n="studio.channelLabel" style="margin-bottom: 0;">🎯 Kênh Xuất Bản (Target Channels)</label>
+              <div style="display: flex; gap: 6px;">
+                <button type="button" class="channel-tool-btn" onclick="toggleAllChannels(true)" data-i18n="studio.selectAllChannels">🌟 Tất Cả Kênh</button>
+                <button type="button" class="channel-tool-btn" onclick="toggleAllChannels(false)" data-i18n="studio.resetChannels">Mặc định</button>
+              </div>
+            </div>
+            <div id="channel-chips-container" class="channel-chips-grid">
+              <!-- Populated dynamically via JS -->
+            </div>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px;" data-i18n="studio.channelHint">
+              💡 Chọn 1 hoặc nhiều kênh. Hệ thống sẽ tự động nhân bản tiến trình tạo video riêng biệt cho từng kênh với avatar và giọng đọc tương ứng.
+            </p>
+          </div>
+
           <!-- THEME SELECTION WITH VISUAL CARDS -->
           <div class="form-group" style="margin-bottom: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -826,6 +1100,7 @@
               <option value="bold-poster" data-i18n="studio.themeBoldPoster">Bold Editorial Poster (Phong cách Poster Thụy Sĩ)</option>
               <option value="pentagram-stat" data-i18n="studio.themePentagramStat">Pentagram Dark Stat (Số liệu Neon Amber & High-Tech)</option>
               <option value="light-pro" data-i18n="studio.themeLightPro">Light Pro (Trắng sáng, Tinh tế, Chuyên nghiệp)</option>
+              <option value="random" data-i18n="studio.themeRandom">🎲 Ngẫu Nhiên (Mỗi video 1 phong cách đồ họa độc bản)</option>
             </select>
 
             <div class="theme-cards-grid" id="theme-cards-container">
@@ -881,6 +1156,15 @@
                 </div>
                 <div class="tc-desc" data-i18n="studio.descLightPro">Trắng sáng tinh tế</div>
                 <div class="tc-accent-bar" style="background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+              </div>
+
+              <div class="theme-card" data-theme-val="random" onclick="selectThemeChip('random')">
+                <div class="tc-header">
+                  <span class="tc-icon">🎲</span>
+                  <span class="tc-title">Ngẫu Nhiên</span>
+                </div>
+                <div class="tc-desc" data-i18n="studio.descRandom">Mỗi video 1 kiểu độc bản</div>
+                <div class="tc-accent-bar" style="background: linear-gradient(90deg, #ec4899, #8b5cf6, #3b82f6, #10b981);"></div>
               </div>
             </div>
           </div>
@@ -971,14 +1255,26 @@
             </div>
           </div>
 
-          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secVoice">🎙 2. Cấu Hình Giọng Đọc & Thương Hiệu</h3>
+          <!-- CHANNEL PROFILES MANAGEMENT -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 28px 0 12px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 16px; color: var(--accent-cyan); margin: 0;" data-i18n="settings.secChannels">📺 Quản Lý Hồ Sơ Kênh (Channel Profiles)</h3>
+            <button type="button" class="btn-action" style="font-size: 13px; padding: 7px 16px; background: rgba(34, 211, 238, 0.15); border-color: rgba(34, 211, 238, 0.4); color: #fff;" onclick="openNewChannelModal()" data-i18n="settings.btnAddChannel">➕ Thêm Kênh Mới</button>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;" data-i18n="settings.channelsSubtitle">
+            Mỗi kênh sở hữu Avatar, Tên Kênh, TikTok Handle, Giọng đọc AI và Mẫu thiết kế riêng biệt. Video sẽ tự động mang thương hiệu tương ứng.
+          </p>
+          <div id="channel-profiles-list" class="channel-profiles-grid">
+            <!-- Rendered dynamically via JS -->
+          </div>
+
+          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secVoice">🎙 2. Cấu Hình Giọng Đọc & Thương Hiệu Mặc Định</h3>
           <div class="form-grid">
             <div class="form-group">
-              <label data-i18n="settings.channelName">Tên Kênh Hiển Thị</label>
+              <label data-i18n="settings.channelName">Tên Kênh Hiển Thị Mặc Định</label>
               <input type="text" id="cfg-channel-name" placeholder="LeviaTech">
             </div>
             <div class="form-group">
-              <label data-i18n="settings.tiktokHandle">TikTok Handle</label>
+              <label data-i18n="settings.tiktokHandle">TikTok Handle Mặc Định</label>
               <input type="text" id="cfg-tiktok-handle" placeholder="@leviatech">
             </div>
             <div class="form-group">
@@ -1065,6 +1361,54 @@
     </div>
   </div>
 
+  <!-- MODAL NEW CHANNEL PROFILE -->
+  <div class="confirm-overlay" id="channel-modal" onclick="closeChannelModal(event)">
+    <div class="confirm-dialog-card" style="max-width: 480px; text-align: left;" onclick="event.stopPropagation()">
+      <h3 class="confirm-title" style="margin-bottom: 6px;" data-i18n="settings.newChannelTitle">➕ Thêm Kênh Mới</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 18px;" data-i18n="settings.newChannelDesc">Tạo hồ sơ nhận diện thương hiệu cho kênh mạng xã hội mới.</p>
+      
+      <form id="new-channel-form" onsubmit="handleCreateChannel(event)">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label data-i18n="settings.channelName">Tên Kênh Hiển Thị</label>
+          <input type="text" id="new-ch-name" placeholder="Ví dụ: AI Explorer VN" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label data-i18n="settings.tiktokHandle">TikTok Handle</label>
+          <input type="text" id="new-ch-handle" placeholder="@aiexplorer.vn" required>
+        </div>
+        <div class="form-grid" style="margin-bottom: 20px;">
+          <div class="form-group">
+            <label data-i18n="studio.voiceLabel">Giọng Đọc Mặc Định</label>
+            <select id="new-ch-voice">
+              <option value="vi-VN-NamMinhNeural">Nam miền Bắc (Nam Minh)</option>
+              <option value="vi-VN-HoaiMyNeural">Nữ miền Bắc (Hoài My)</option>
+              <option value="vi-VN-DaLyNeural">Nữ miền Nam (Đà Lý)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-i18n="studio.themeLabel">Theme Mặc Định</label>
+            <select id="new-ch-theme">
+              <option value="random">🎲 Ngẫu Nhiên (Random Theme)</option>
+              <option value="dark-neon">Dark Neon</option>
+              <option value="cyberpunk-glitch">Cyberpunk Glitch</option>
+              <option value="liquid-aurora">Liquid Aurora</option>
+              <option value="bold-poster">Bold Editorial Poster</option>
+              <option value="pentagram-stat">Pentagram Dark Stat</option>
+              <option value="light-pro">Light Pro</option>
+            </select>
+          </div>
+        </div>
+        <div class="confirm-btn-group">
+          <button type="button" class="btn-dialog-cancel" onclick="closeChannelModalDirect()" data-i18n="dialog.btnCancel">✕ Hủy</button>
+          <button type="submit" class="btn-dialog-confirm" style="background: linear-gradient(135deg, #7c3aed, #22d3ee);" data-i18n="settings.btnCreateChannel">💾 Tạo Kênh</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- HIDDEN FILE INPUT FOR AVATAR UPLOAD -->
+  <input type="file" id="hidden-avatar-input" accept="image/png,image/jpeg,image/jpg,image/webp" style="display: none;" onchange="handleAvatarFileSelected(event)">
+
   <!-- MODERN TOAST NOTIFICATION -->
   <div class="toast-pill" id="toast-msg">
     <span class="toast-icon-box" id="toast-icon">✨</span>
@@ -1095,12 +1439,18 @@
         "studio.themeBoldPoster": "Bold Editorial Poster (Phong cách Poster Thụy Sĩ)",
         "studio.themePentagramStat": "Pentagram Dark Stat (Số liệu Neon Amber & High-Tech)",
         "studio.themeLightPro": "Light Pro (Trắng sáng, Tinh tế, Chuyên nghiệp)",
+        "studio.themeRandom": "🎲 Ngẫu Nhiên (Mỗi video 1 phong cách đồ họa độc bản)",
         "studio.descDarkNeon": "Cyberpunk Glow",
         "studio.descCyberpunkGlitch": "RGB Split & Matrix",
         "studio.descLiquidAurora": "Fluid Mesh Gradient",
         "studio.descBoldPoster": "Swiss Editorial Typo",
         "studio.descPentagramStat": "Amber Neon High-Tech",
         "studio.descLightPro": "Trắng sáng tinh tế",
+        "studio.descRandom": "Mỗi video 1 kiểu độc bản",
+        "studio.channelLabel": "🎯 Kênh Xuất Bản (Target Channels)",
+        "studio.selectAllChannels": "🌟 Tất Cả Kênh",
+        "studio.resetChannels": "Mặc định",
+        "studio.channelHint": "💡 Chọn 1 hoặc nhiều kênh. Hệ thống sẽ tự động nhân bản tiến trình tạo video riêng biệt cho từng kênh với avatar và giọng đọc tương ứng.",
         "studio.voiceLabel": "Giọng Đọc AI (Edge-TTS)",
         "studio.voiceNamMinh": "Nam miền Bắc (Nam Minh - Truyền cảm, chuẩn tin tức)",
         "studio.voiceHoaiMy": "Nữ miền Bắc (Hoài My - Trẻ trung, năng động)",
@@ -1144,14 +1494,23 @@
         "settings.llmBaseUrl": "LLM Base URL",
         "settings.llmApiKey": "LLM API Key",
         "settings.llmModel": "LLM Model",
-        "settings.secVoice": "🎙 2. Cấu Hình Giọng Đọc & Thương Hiệu",
-        "settings.channelName": "Tên Kênh Hiển Thị",
-        "settings.tiktokHandle": "TikTok Handle",
+        "settings.secChannels": "📺 2. Quản Lý Hồ Sơ Kênh (Channel Profiles)",
+        "settings.channelsSubtitle": "Mỗi kênh sở hữu Avatar, Tên Kênh, TikTok Handle, Giọng đọc AI và Mẫu thiết kế riêng biệt. Video sẽ tự động mang thương hiệu tương ứng.",
+        "settings.btnAddChannel": "➕ Thêm Kênh Mới",
+        "settings.newChannelTitle": "➕ Thêm Kênh Mới",
+        "settings.newChannelDesc": "Tạo hồ sơ nhận diện thương hiệu cho kênh mạng xã hội mới.",
+        "settings.btnCreateChannel": "💾 Tạo Kênh",
+        "settings.btnSaveChannel": "💾 Lưu Kênh",
+        "settings.btnSetDefault": "⭐ Đặt Mặc Định",
+        "settings.isDefaultBadge": "Mặc Định",
+        "settings.secVoice": "🎙 3. Cấu Hình Giọng Đọc & Thương Hiệu Mặc Định",
+        "settings.channelName": "Tên Kênh Hiển Thị Mặc Định",
+        "settings.tiktokHandle": "TikTok Handle Mặc Định",
         "settings.ttsProvider": "Nhà Cung Cấp TTS",
         "settings.ttsEdge": "Edge-TTS (Miễn phí 100%, chất lượng cao)",
-        "settings.secTelegram": "💬 3. Cấu Hình Telegram Bot (Điều khiển từ xa)",
+        "settings.secTelegram": "💬 4. Cấu Hình Telegram Bot (Điều khiển từ xa)",
         "settings.telegramToken": "Telegram Bot Token (lấy từ @BotFather)",
-        "settings.secEngine": "☁️ 4. Chế Độ Render (Local / GitHub Actions)",
+        "settings.secEngine": "☁️ 5. Chế Độ Render (Local / GitHub Actions)",
         "settings.renderEngine": "Chế Độ Render Mặc Định",
         "settings.engineLocal": "🖥️ Local (Render trực tiếp trên máy)",
         "settings.engineGitHub": "☁️ GitHub Actions (Cloud Runner - Cực nhẹ cho Pi 5)",
@@ -1178,12 +1537,17 @@
         "dialog.clearMessage": "Bạn có chắc muốn dọn dẹp tất cả các video đã xong hoặc thất bại khỏi hàng đợi?",
         "dialog.btnConfirmClear": "🧹 Dọn Dẹp Ngay",
         "dialog.btnCancel": "✕ Hủy Bỏ",
+        "dialog.deleteChannelTitle": "Xác Nhận Xóa Kênh",
+        "dialog.deleteChannelMsg": "Bạn có chắc chắn muốn xóa hồ sơ kênh này không?",
         "toast.configSuccess": "✅ Đã lưu cấu hình hệ thống thành công!",
         "toast.configError": "❌ Lưu cấu hình thất bại: ",
         "toast.copySuccess": "📋 Đã sao chép caption vào clipboard!",
         "toast.deleteSuccess": "🗑️ Đã xóa video thành công!",
         "toast.deleteError": "❌ Xóa thất bại: ",
         "toast.clearSuccess": "🧹 Đã dọn dẹp hàng đợi thành công!",
+        "toast.channelSaved": "✅ Đã lưu thông tin kênh thành công!",
+        "toast.channelDeleted": "🗑️ Đã xóa kênh thành công!",
+        "toast.avatarUploaded": "🖼️ Đã cập nhật ảnh đại diện kênh!",
       },
       en: {
         // Brand & Header
@@ -1205,12 +1569,18 @@
         "studio.themeBoldPoster": "Bold Editorial Poster (Swiss Minimal Typo, Magazine Layout)",
         "studio.themePentagramStat": "Pentagram Dark Stat (Electric Amber Stat, Tech Grid)",
         "studio.themeLightPro": "Light Pro (Clean White, Crisp & Professional)",
+        "studio.themeRandom": "🎲 Random Theme (Unique visual style for every video)",
         "studio.descDarkNeon": "Cyberpunk Glow",
         "studio.descCyberpunkGlitch": "RGB Split & Matrix",
         "studio.descLiquidAurora": "Fluid Mesh Gradient",
         "studio.descBoldPoster": "Swiss Editorial Typo",
         "studio.descPentagramStat": "Amber Neon High-Tech",
         "studio.descLightPro": "Clean White Crisp",
+        "studio.descRandom": "Unique visuals per video",
+        "studio.channelLabel": "🎯 Target Channels",
+        "studio.selectAllChannels": "🌟 All Channels",
+        "studio.resetChannels": "Default",
+        "studio.channelHint": "💡 Select 1 or more channels. The studio will replicate and produce distinct videos with corresponding branding, avatars, and voices.",
         "studio.voiceLabel": "AI Voice Narrator (Edge-TTS)",
         "studio.voiceNamMinh": "Male Northern VN (Nam Minh - Expressive, News anchor)",
         "studio.voiceHoaiMy": "Female Northern VN (Hoài My - Young, Dynamic)",
@@ -1254,14 +1624,23 @@
         "settings.llmBaseUrl": "LLM Base URL",
         "settings.llmApiKey": "LLM API Key",
         "settings.llmModel": "LLM Model",
-        "settings.secVoice": "🎙 2. Voice Narration & Channel Branding",
-        "settings.channelName": "Channel Display Name",
-        "settings.tiktokHandle": "TikTok Handle",
+        "settings.secChannels": "📺 2. Channel Profiles Management",
+        "settings.channelsSubtitle": "Each channel can have its own Avatar, Name, TikTok Handle, AI Voice, and Theme preset.",
+        "settings.btnAddChannel": "➕ Add New Channel",
+        "settings.newChannelTitle": "➕ Add New Channel",
+        "settings.newChannelDesc": "Create brand identity profile for a new social media channel.",
+        "settings.btnCreateChannel": "💾 Create Channel",
+        "settings.btnSaveChannel": "💾 Save Channel",
+        "settings.btnSetDefault": "⭐ Set Default",
+        "settings.isDefaultBadge": "Default",
+        "settings.secVoice": "🎙 3. Voice Narration & Default Branding",
+        "settings.channelName": "Default Channel Name",
+        "settings.tiktokHandle": "Default TikTok Handle",
         "settings.ttsProvider": "TTS Provider",
         "settings.ttsEdge": "Edge-TTS (100% Free, High Quality)",
-        "settings.secTelegram": "💬 3. Telegram Bot (Remote Control)",
+        "settings.secTelegram": "💬 4. Telegram Bot (Remote Control)",
         "settings.telegramToken": "Telegram Bot Token (from @BotFather)",
-        "settings.secEngine": "☁️ 4. Render Engine (Local / GitHub Actions)",
+        "settings.secEngine": "☁️ 5. Render Engine (Local / GitHub Actions)",
         "settings.renderEngine": "Default Render Engine",
         "settings.engineLocal": "🖥️ Local (Render directly on machine)",
         "settings.engineGitHub": "☁️ GitHub Actions (Cloud Runner - Ultra-light on Pi 5)",
@@ -1288,12 +1667,17 @@
         "dialog.clearMessage": "Are you sure you want to clear finished or failed videos from the queue?",
         "dialog.btnConfirmClear": "🧹 Clean Up Now",
         "dialog.btnCancel": "✕ Cancel",
+        "dialog.deleteChannelTitle": "Confirm Channel Deletion",
+        "dialog.deleteChannelMsg": "Are you sure you want to delete this channel profile?",
         "toast.configSuccess": "✅ System settings saved successfully!",
         "toast.configError": "❌ Failed to save settings: ",
         "toast.copySuccess": "📋 Caption copied to clipboard!",
         "toast.deleteSuccess": "🗑️ Job deleted successfully!",
         "toast.deleteError": "❌ Failed to delete job: ",
         "toast.clearSuccess": "🧹 Queue cleaned up successfully!",
+        "toast.channelSaved": "✅ Channel profile saved successfully!",
+        "toast.channelDeleted": "🗑️ Channel profile deleted successfully!",
+        "toast.avatarUploaded": "🖼️ Channel avatar updated successfully!",
       }
     };
 
@@ -1336,6 +1720,10 @@
 
       // Re-sync theme chips and badge
       syncThemeChips();
+
+      // Re-render channel elements
+      renderChannelChips();
+      renderChannelProfilesSettings();
     }
 
     function syncThemeChips() {
@@ -1364,6 +1752,10 @@
       syncThemeChips();
     }
 
+    let channelsList = [];
+    let selectedChannelIds = [];
+    let activeAvatarChannelId = null;
+
     function switchTab(tabId, el) {
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -1372,7 +1764,10 @@
       const target = document.getElementById('tab-' + tabId);
       if (target) target.classList.add('active');
       if (tabId === 'queue') fetchJobs();
-      if (tabId === 'settings') fetchConfig();
+      if (tabId === 'settings') {
+        fetchConfig();
+        fetchChannels();
+      }
     }
 
     async function handleGenerate(e) {
@@ -1387,13 +1782,22 @@
       btn.innerHTML = `<span>${t('studio.btnSubmitting')}</span>`;
 
       try {
+        const payload = {
+          url,
+          theme,
+          voice,
+          engine,
+          channels: selectedChannelIds.length > 0 ? selectedChannelIds : undefined
+        };
         const res = await fetch('/api/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, theme, voice, engine })
+          body: JSON.stringify(payload)
         });
         const data = await res.json();
-        showToast(t('toast.queueSuccess'));
+        const count = data.count || 1;
+        const msg = count > 1 ? `✅ Đã đưa ${count} video vào hàng đợi!` : t('toast.queueSuccess');
+        showToast(msg);
         document.getElementById('input-url').value = '';
         switchTab('queue');
       } catch (err) {
@@ -1442,6 +1846,19 @@
         const shortUrl = j.url.replace(/^https?:\/\/(www\.)?github\.com\//, '').slice(0, 32);
         const locale = currentLang === 'vi' ? 'vi-VN' : 'en-US';
         const timeStr = new Date(j.created_at).toLocaleTimeString(locale);
+
+        let channelBadge = '';
+        if (j.channel) {
+          const chAvatar = j.avatar || '/assets/avatar.jpg';
+          channelBadge = `
+            <div>
+              <span class="channel-badge" title="${escapeHtml(j.channel)}${j.handle ? ' (' + escapeHtml(j.handle) + ')' : ''}">
+                <img src="${chAvatar}" onerror="this.src='/assets/avatar.jpg';">
+                <span>${escapeHtml(j.channel)}</span>
+              </span>
+            </div>
+          `;
+        }
 
         let actionBtn = '';
         if (j.status === 'completed') {
@@ -1498,8 +1915,9 @@
         return `
           <tr>
             <td style="white-space:nowrap;"><code style="color:var(--accent-cyan); font-weight:700;">#${j.id.slice(-6)}</code></td>
-            <td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-              <a href="${j.url}" target="_blank" style="color:#fff; text-decoration:none;" title="${j.url}">${shortUrl}</a>
+            <td style="max-width:190px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <a href="${j.url}" target="_blank" style="color:#fff; text-decoration:none; font-weight:500;" title="${j.url}">${shortUrl}</a>
+              ${channelBadge}
             </td>
             <td style="white-space:nowrap;">
               <div class="status-cell-wrapper">
@@ -1515,6 +1933,301 @@
           </tr>
         `;
       }).join('');
+    }
+
+    // ── CHANNEL PROFILES LOGIC ──────────────────────────────────────────────
+
+    async function fetchChannels() {
+      try {
+        const res = await fetch('/api/channels');
+        if (!res.ok) return;
+        channelsList = await res.json();
+        
+        // Default selection: if empty, select the default channel
+        if (selectedChannelIds.length === 0) {
+          const def = channelsList.find(c => c.is_default) || channelsList[0];
+          if (def) selectedChannelIds = [def.id];
+        }
+
+        renderChannelChips();
+        renderChannelProfilesSettings();
+      } catch (err) {
+        console.error('Failed to fetch channels:', err);
+      }
+    }
+
+    function renderChannelChips() {
+      const container = document.getElementById('channel-chips-container');
+      if (!container) return;
+
+      if (channelsList.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">Đang tải danh sách kênh...</div>`;
+        return;
+      }
+
+      container.innerHTML = channelsList.map(ch => {
+        const isSel = selectedChannelIds.includes(ch.id);
+        const avatarSrc = ch.avatar || '/assets/avatar.jpg';
+        return `
+          <div class="channel-chip ${isSel ? 'selected' : ''}" onclick="toggleChannelSelection('${ch.id}')">
+            <img class="channel-chip-avatar" src="${avatarSrc}" onerror="this.src='/assets/avatar.jpg';">
+            <div class="channel-chip-info">
+              <div class="channel-chip-name">${escapeHtml(ch.name)}</div>
+              <div class="channel-chip-handle">${escapeHtml(ch.handle || '@' + ch.id)}</div>
+            </div>
+            <div class="channel-chip-check">${isSel ? '✓' : ''}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleChannelSelection(chId) {
+      if (selectedChannelIds.includes(chId)) {
+        if (selectedChannelIds.length > 1) {
+          selectedChannelIds = selectedChannelIds.filter(id => id !== chId);
+        } else {
+          showToast(t('studio.channelHint'));
+        }
+      } else {
+        selectedChannelIds.push(chId);
+      }
+      renderChannelChips();
+    }
+
+    function toggleAllChannels(selectAll) {
+      if (selectAll) {
+        selectedChannelIds = channelsList.map(c => c.id);
+      } else {
+        const def = channelsList.find(c => c.is_default) || channelsList[0];
+        selectedChannelIds = def ? [def.id] : [];
+      }
+      renderChannelChips();
+    }
+
+    function renderChannelProfilesSettings() {
+      const container = document.getElementById('channel-profiles-list');
+      if (!container) return;
+
+      if (channelsList.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-muted); font-size:13px;">Chưa có hồ sơ kênh nào.</div>`;
+        return;
+      }
+
+      container.innerHTML = channelsList.map(ch => {
+        const isDef = ch.is_default;
+        const avatarSrc = ch.avatar || '/assets/avatar.jpg';
+        return `
+          <div class="channel-profile-card" id="cp-card-${ch.id}">
+            <div class="cp-header">
+              <div class="cp-avatar-wrap" onclick="triggerAvatarUpload('${ch.id}')" title="Click để thay ảnh đại diện">
+                <img src="${avatarSrc}" id="cp-avatar-img-${ch.id}" onerror="this.src='/assets/avatar.jpg';">
+                <div class="cp-avatar-overlay">📷 Đổi</div>
+              </div>
+              <div class="cp-info">
+                <div class="cp-title">
+                  <span>${escapeHtml(ch.name)}</span>
+                  ${isDef ? `<span class="cp-badge-default">${t('settings.isDefaultBadge')}</span>` : ''}
+                </div>
+                <div style="font-size:12px; color:var(--accent-cyan); font-family:'Space Mono',monospace;">
+                  ${escapeHtml(ch.handle || '')}
+                </div>
+              </div>
+            </div>
+
+            <div class="cp-fields">
+              <div class="form-group">
+                <label data-i18n="settings.channelName">Tên Kênh</label>
+                <input type="text" id="cp-name-${ch.id}" value="${escapeHtml(ch.name)}">
+              </div>
+              <div class="form-group">
+                <label data-i18n="settings.tiktokHandle">TikTok Handle</label>
+                <input type="text" id="cp-handle-${ch.id}" value="${escapeHtml(ch.handle)}">
+              </div>
+              <div class="form-group">
+                <label data-i18n="studio.voiceLabel">Giọng Đọc</label>
+                <select id="cp-voice-${ch.id}">
+                  <option value="vi-VN-NamMinhNeural" ${ch.voice === 'vi-VN-NamMinhNeural' ? 'selected' : ''}>Nam miền Bắc</option>
+                  <option value="vi-VN-HoaiMyNeural" ${ch.voice === 'vi-VN-HoaiMyNeural' ? 'selected' : ''}>Nữ miền Bắc</option>
+                  <option value="vi-VN-DaLyNeural" ${ch.voice === 'vi-VN-DaLyNeural' ? 'selected' : ''}>Nữ miền Nam</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label data-i18n="studio.themeLabel">Theme Mặc Định</label>
+                <select id="cp-theme-${ch.id}">
+                  <option value="random" ${ch.theme === 'random' ? 'selected' : ''}>🎲 Ngẫu Nhiên</option>
+                  <option value="dark-neon" ${ch.theme === 'dark-neon' ? 'selected' : ''}>Dark Neon</option>
+                  <option value="cyberpunk-glitch" ${ch.theme === 'cyberpunk-glitch' ? 'selected' : ''}>Cyberpunk Glitch</option>
+                  <option value="liquid-aurora" ${ch.theme === 'liquid-aurora' ? 'selected' : ''}>Liquid Aurora</option>
+                  <option value="bold-poster" ${ch.theme === 'bold-poster' ? 'selected' : ''}>Bold Poster</option>
+                  <option value="pentagram-stat" ${ch.theme === 'pentagram-stat' ? 'selected' : ''}>Pentagram Stat</option>
+                  <option value="light-pro" ${ch.theme === 'light-pro' ? 'selected' : ''}>Light Pro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="cp-actions">
+              ${!isDef ? `
+                <button type="button" class="btn-action" style="font-size:12px; padding:6px 10px;" onclick="handleSetDefaultChannel('${ch.id}')" data-i18n="settings.btnSetDefault">⭐ Đặt Mặc Định</button>
+              ` : ''}
+              <button type="button" class="btn-action" style="font-size:12px; padding:6px 12px; background:rgba(16,185,129,0.15); border-color:rgba(16,185,129,0.4); color:#fff;" onclick="handleSaveChannel('${ch.id}')" data-i18n="settings.btnSaveChannel">💾 Lưu</button>
+              ${channelsList.length > 1 ? `
+                <button type="button" class="btn-action btn-danger-action" style="font-size:12px; padding:6px 10px;" onclick="handleDeleteChannel('${ch.id}')" title="Xóa kênh">🗑️</button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function handleSaveChannel(chId) {
+      const name = document.getElementById(`cp-name-${chId}`).value.trim();
+      const handle = document.getElementById(`cp-handle-${chId}`).value.trim();
+      const voice = document.getElementById(`cp-voice-${chId}`).value;
+      const theme = document.getElementById(`cp-theme-${chId}`).value;
+
+      const existing = channelsList.find(c => c.id === chId) || {};
+      const payload = {
+        id: chId,
+        name: name || existing.name,
+        handle: handle || existing.handle,
+        voice: voice || existing.voice,
+        theme: theme || existing.theme,
+        avatar: existing.avatar,
+        is_default: existing.is_default
+      };
+
+      try {
+        const res = await fetch('/api/channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast(t('toast.channelSaved'));
+          await fetchChannels();
+        } else {
+          showToast('❌ Lỗi cập nhật kênh', 'error');
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+
+    async function handleSetDefaultChannel(chId) {
+      const existing = channelsList.find(c => c.id === chId);
+      if (!existing) return;
+      existing.is_default = true;
+
+      try {
+        const res = await fetch('/api/channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(existing)
+        });
+        if (res.ok) {
+          showToast(t('toast.channelSaved'));
+          await fetchChannels();
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+
+    async function handleDeleteChannel(chId) {
+      const confirmed = await showConfirm({
+        title: t('dialog.deleteChannelTitle'),
+        message: t('dialog.deleteChannelMsg'),
+        confirmText: t('queue.btnDelete'),
+        cancelText: t('dialog.btnCancel'),
+        type: 'danger'
+      });
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch(`/api/channels/${chId}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast(t('toast.channelDeleted'));
+          selectedChannelIds = selectedChannelIds.filter(id => id !== chId);
+          await fetchChannels();
+        } else {
+          showToast('❌ Không thể xóa kênh', 'error');
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
+    }
+
+    function triggerAvatarUpload(chId) {
+      activeAvatarChannelId = chId;
+      const fileInput = document.getElementById('hidden-avatar-input');
+      fileInput.value = '';
+      fileInput.click();
+    }
+
+    async function handleAvatarFileSelected(e) {
+      const file = e.target.files[0];
+      if (!file || !activeAvatarChannelId) return;
+
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      try {
+        const res = await fetch(`/api/channels/${activeAvatarChannelId}/avatar`, {
+          method: 'POST',
+          body: formData
+        });
+        if (res.ok) {
+          showToast(t('toast.avatarUploaded'));
+          await fetchChannels();
+        } else {
+          showToast('❌ Tải ảnh thất bại', 'error');
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      } finally {
+        activeAvatarChannelId = null;
+      }
+    }
+
+    function openNewChannelModal() {
+      document.getElementById('new-ch-name').value = '';
+      document.getElementById('new-ch-handle').value = '';
+      document.getElementById('channel-modal').classList.add('open');
+    }
+
+    function closeChannelModal(e) {
+      if (e.target.id === 'channel-modal') closeChannelModalDirect();
+    }
+
+    function closeChannelModalDirect() {
+      document.getElementById('channel-modal').classList.remove('open');
+    }
+
+    async function handleCreateChannel(e) {
+      e.preventDefault();
+      const name = document.getElementById('new-ch-name').value.trim();
+      const handle = document.getElementById('new-ch-handle').value.trim();
+      const voice = document.getElementById('new-ch-voice').value;
+      const theme = document.getElementById('new-ch-theme').value;
+
+      if (!name) return;
+
+      try {
+        const res = await fetch('/api/channels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, handle, voice, theme, avatar: '/assets/avatar.jpg' })
+        });
+        if (res.ok) {
+          showToast(t('toast.channelSaved'));
+          closeChannelModalDirect();
+          await fetchChannels();
+        } else {
+          showToast('❌ Lỗi tạo kênh', 'error');
+        }
+      } catch (err) {
+        showToast('❌ ' + err.message, 'error');
+      }
     }
 
     function escapeHtml(str) {
@@ -1747,6 +2460,7 @@
 
     // Initial load
     setLanguage(currentLang);
+    fetchChannels();
     fetchJobs();
   </script>
 </body>

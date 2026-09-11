@@ -197,7 +197,9 @@ export async function runPipeline(scriptPath: string): Promise<void> {
   const ttAvatarExt = bundledAvatar.split(".").pop()!.toLowerCase();
   const ttAvatarFile = `tiktok-avatar.${ttAvatarExt}`;
   const ttAvatarOut = join(outputDir, ttAvatarFile);
-  if (cfg.tiktok.avatarUrl) {
+  if (cfg.tiktok.avatarPath && existsSync(cfg.tiktok.avatarPath)) {
+    await copyFile(cfg.tiktok.avatarPath, ttAvatarOut);
+  } else if (cfg.tiktok.avatarUrl) {
     const r = await fetchImage(cfg.tiktok.avatarUrl, ttAvatarOut);
     if (!r.success) {
       log.warn(`TikTok avatar download failed: ${r.reason} → falling back to bundled default`);

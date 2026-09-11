@@ -2,7 +2,8 @@ import { config } from "dotenv";
 config({ path: [".env.local", ".env"] });
 
 export type TtsProvider = "edge-tts" | "lucylab" | "elevenlabs" | "vbee";
-export type VideoTheme =
+
+export type ConcreteTheme =
   | "dark-neon"
   | "cyberpunk-glitch"
   | "liquid-aurora"
@@ -10,12 +11,16 @@ export type VideoTheme =
   | "pentagram-stat"
   | "light-pro";
 
+export type VideoTheme = ConcreteTheme | "random";
+
 export interface TiktokConfig {
   displayName: string;
   handle: string;
   followers: string;
   /** URL to download avatar JPG. If undefined, the bundled `assets/avatar.jpg` is used. */
   avatarUrl?: string;
+  /** Local file path to avatar image. */
+  avatarPath?: string;
 }
 
 export interface LlmConfig {
@@ -140,8 +145,8 @@ export function loadConfig(): Config {
     }
   }
 
-  const videoTheme = (process.env.VIDEO_THEME ?? "dark-neon") as VideoTheme;
-  const validThemes: VideoTheme[] = [
+  const rawTheme = (process.env.VIDEO_THEME ?? "dark-neon").trim().toLowerCase();
+  const concreteThemes: ConcreteTheme[] = [
     "dark-neon",
     "cyberpunk-glitch",
     "liquid-aurora",
@@ -149,8 +154,13 @@ export function loadConfig(): Config {
     "pentagram-stat",
     "light-pro",
   ];
-  if (!validThemes.includes(videoTheme)) {
-    throw new Error(`VIDEO_THEME must be one of [${validThemes.join(", ")}], got "${videoTheme}"`);
+  let videoTheme: ConcreteTheme;
+  if (rawTheme === "random" || rawTheme === "") {
+    videoTheme = concreteThemes[Math.floor(Math.random() * concreteThemes.length)];
+  } else if (concreteThemes.includes(rawTheme as ConcreteTheme)) {
+    videoTheme = rawTheme as ConcreteTheme;
+  } else {
+    throw new Error(`VIDEO_THEME must be one of [${concreteThemes.join(", ")}, random], got "${rawTheme}"`);
   }
 
   return {
@@ -176,10 +186,11 @@ export function loadConfig(): Config {
     vbeePollIntervalMs: intDefault("VBEE_POLL_INTERVAL_MS", 2000),
     vbeePollTimeoutMs: intDefault("VBEE_POLL_TIMEOUT_MS", 60000),
     tiktok: {
-      displayName: process.env.TIKTOK_DISPLAY_NAME ?? "Công nghệ 24h",
-      handle: process.env.TIKTOK_HANDLE ?? "@congnghe24h",
+      displayName: process.env.TIKTOK_DISPLAY_NAME ?? process.env.CHANNEL_NAME ?? "LeviaTech",
+      handle: process.env.TIKTOK_HANDLE ?? "@leviatech",
       followers: process.env.TIKTOK_FOLLOWERS ?? "1.2M followers",
       avatarUrl: process.env.TIKTOK_AVATAR_URL || undefined,
+      avatarPath: process.env.TIKTOK_AVATAR_PATH || undefined,
     },
     ttsConcurrency: intDefault("TTS_CONCURRENCY", 1),
     videoTheme,

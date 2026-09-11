@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,6 +47,17 @@ type Config struct {
 	GitHubWorkflow    string `json:"github_workflow"` // "render.yml"
 }
 
+// ChannelProfile defines brand identity and presets for a specific channel
+type ChannelProfile struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Handle    string `json:"handle"`
+	Avatar    string `json:"avatar,omitempty"` // URL or /assets/ path
+	Voice     string `json:"voice,omitempty"`
+	Theme     string `json:"theme,omitempty"`
+	IsDefault bool   `json:"is_default,omitempty"`
+}
+
 // Job represents a video generation request
 type Job struct {
 	ID        string    `json:"id"`
@@ -52,6 +65,8 @@ type Job struct {
 	Theme     string    `json:"theme,omitempty"`
 	Voice     string    `json:"voice,omitempty"`
 	Channel   string    `json:"channel,omitempty"`
+	Handle    string    `json:"handle,omitempty"`
+	Avatar    string    `json:"avatar,omitempty"`
 	Engine    string    `json:"engine,omitempty"` // "local" or "github"
 	Status    string    `json:"status"`           // queued, processing, completed, failed
 	Progress  string    `json:"progress,omitempty"`
@@ -69,6 +84,8 @@ type Server struct {
 	cfgMu      sync.RWMutex
 	jobs       map[string]*Job
 	jobsMu     sync.RWMutex
+	channels   map[string]*ChannelProfile
+	channelsMu sync.RWMutex
 	jobQueue   chan *Job
 	httpServer *http.Server
 }
@@ -161,10 +178,14 @@ func main() {
 	}
 
 	s := &Server{
-		cfg:      cfg,
-		jobs:     make(map[string]*Job),
-		jobQueue: make(chan *Job, 100),
+		cfg:        cfg,
+		jobs:       make(map[string]*Job),
+		channels:   make(map[string]*ChannelProfile),
+		jobQueue:   make(chan *Job, 100),
 	}
+
+	// Load channel profiles from server/channels.json
+	s.loadChannels()
 
 	// Scan historical completed videos from output/
 	s.scanExistingOutputs()
@@ -208,6 +229,8 @@ func main() {
 	// REST API
 	mux.HandleFunc("/health", s.handleHealth)
 	mux.HandleFunc("/api/config", s.handleConfig)
+	mux.HandleFunc("/api/channels", s.handleChannels)
+	mux.HandleFunc("/api/channels/", s.handleChannelDetail)
 	mux.HandleFunc("/api/jobs", s.handleJobs)
 	mux.HandleFunc("/api/jobs/", s.handleJobDetail)
 
@@ -247,13 +270,15 @@ func (s *Server) scanExistingOutputs() {
 
 			// Read title & url from script.json
 			jobURL := entry.Name()
+			jobChannel := ""
 			caption := ""
 
 			if scriptBytes, err := os.ReadFile(scriptPath); err == nil {
 				var parsed struct {
 					Metadata struct {
-						Title  string `json:"title"`
-						Source struct {
+						Title   string `json:"title"`
+						Channel string `json:"channel"`
+						Source  struct {
 							URL string `json:"url"`
 						} `json:"source"`
 					} `json:"metadata"`
@@ -263,6 +288,9 @@ func (s *Server) scanExistingOutputs() {
 						jobURL = parsed.Metadata.Source.URL
 					} else if parsed.Metadata.Title != "" {
 						jobURL = parsed.Metadata.Title
+					}
+					if parsed.Metadata.Channel != "" {
+						jobChannel = parsed.Metadata.Channel
 					}
 				}
 			}
@@ -275,6 +303,7 @@ func (s *Server) scanExistingOutputs() {
 			s.jobs[jobID] = &Job{
 				ID:        jobID,
 				URL:       jobURL,
+				Channel:   jobChannel,
 				Status:    "completed",
 				Progress:  "Đã hoàn thành",
 				VideoPath: videoPath,
@@ -383,6 +412,20 @@ func (s *Server) processLocalJob(job *Job) {
 	}
 	if job.Channel != "" {
 		cmd.Env = append(cmd.Env, "CHANNEL_NAME="+job.Channel)
+	}
+	if job.Handle != "" {
+		cmd.Env = append(cmd.Env, "TIKTOK_HANDLE="+job.Handle)
+	}
+	if job.Avatar != "" {
+		if strings.HasPrefix(job.Avatar, "/") {
+			avatarRel := strings.TrimPrefix(job.Avatar, "/")
+			avatarAbs := filepath.Join(s.cfg.ProjectDir, filepath.FromSlash(avatarRel))
+			cmd.Env = append(cmd.Env, "TIKTOK_AVATAR_PATH="+avatarAbs)
+		} else if strings.HasPrefix(job.Avatar, "http://") || strings.HasPrefix(job.Avatar, "https://") {
+			cmd.Env = append(cmd.Env, "TIKTOK_AVATAR_URL="+job.Avatar)
+		} else {
+			cmd.Env = append(cmd.Env, "TIKTOK_AVATAR_PATH="+job.Avatar)
+		}
 	}
 
 	stdout, err := cmd.StdoutPipe()
@@ -555,6 +598,20 @@ func (s *Server) processGitHubJob(job *Job) {
 	}
 	if job.Channel != "" {
 		dryCmd.Env = append(dryCmd.Env, "CHANNEL_NAME="+job.Channel)
+	}
+	if job.Handle != "" {
+		dryCmd.Env = append(dryCmd.Env, "TIKTOK_HANDLE="+job.Handle)
+	}
+	if job.Avatar != "" {
+		if strings.HasPrefix(job.Avatar, "/") {
+			avatarRel := strings.TrimPrefix(job.Avatar, "/")
+			avatarAbs := filepath.Join(s.cfg.ProjectDir, filepath.FromSlash(avatarRel))
+			dryCmd.Env = append(dryCmd.Env, "TIKTOK_AVATAR_PATH="+avatarAbs)
+		} else if strings.HasPrefix(job.Avatar, "http://") || strings.HasPrefix(job.Avatar, "https://") {
+			dryCmd.Env = append(dryCmd.Env, "TIKTOK_AVATAR_URL="+job.Avatar)
+		} else {
+			dryCmd.Env = append(dryCmd.Env, "TIKTOK_AVATAR_PATH="+job.Avatar)
+		}
 	}
 
 	stdout, err := dryCmd.StdoutPipe()
@@ -1076,6 +1133,256 @@ func (s *Server) saveConfigToEnv() {
 	_ = os.WriteFile(envPath, []byte(strings.Join(newLines, "\n")), 0644)
 }
 
+var concreteThemes = []string{
+	"dark-neon",
+	"cyberpunk-glitch",
+	"liquid-aurora",
+	"bold-poster",
+	"pentagram-stat",
+	"light-pro",
+}
+
+func randomConcreteTheme() string {
+	return concreteThemes[rand.Intn(len(concreteThemes))]
+}
+
+// ── CHANNEL PROFILES MANAGEMENT ───────────────────────────────────────────
+
+func (s *Server) loadChannels() {
+	s.channelsMu.Lock()
+	defer s.channelsMu.Unlock()
+
+	channelsFile := filepath.Join(s.cfg.ProjectDir, "server", "channels.json")
+	data, err := os.ReadFile(channelsFile)
+	if err == nil {
+		var list []*ChannelProfile
+		if err := json.Unmarshal(data, &list); err == nil && len(list) > 0 {
+			s.channels = make(map[string]*ChannelProfile)
+			for _, cp := range list {
+				s.channels[cp.ID] = cp
+			}
+			log.Printf("Loaded %d channel profile(s) from channels.json", len(s.channels))
+			return
+		}
+	}
+
+	// Default fallback profiles
+	defaults := []*ChannelProfile{
+		{
+			ID:        "leviatech",
+			Name:      "LeviaTech",
+			Handle:    "@leviatech",
+			Avatar:    "/assets/avatar.jpg",
+			Voice:     "vi-VN-NamMinhNeural",
+			Theme:     "dark-neon",
+			IsDefault: true,
+		},
+		{
+			ID:        "codedao",
+			Name:      "Code Dạo Review",
+			Handle:    "@codedao.vn",
+			Avatar:    "/assets/avatar.jpg",
+			Voice:     "vi-VN-HoaiMyNeural",
+			Theme:     "bold-poster",
+			IsDefault: false,
+		},
+		{
+			ID:        "aitrend",
+			Name:      "AI Explorer VN",
+			Handle:    "@aiexplorer.vn",
+			Avatar:    "/assets/avatar.jpg",
+			Voice:     "vi-VN-DaLyNeural",
+			Theme:     "liquid-aurora",
+			IsDefault: false,
+		},
+	}
+	s.channels = make(map[string]*ChannelProfile)
+	for _, cp := range defaults {
+		s.channels[cp.ID] = cp
+	}
+	s.saveChannelsLocked()
+}
+
+func (s *Server) saveChannelsLocked() {
+	list := make([]*ChannelProfile, 0, len(s.channels))
+	for _, cp := range s.channels {
+		list = append(list, cp)
+	}
+	channelsFile := filepath.Join(s.cfg.ProjectDir, "server", "channels.json")
+	bytes, err := json.MarshalIndent(list, "", "  ")
+	if err == nil {
+		_ = os.WriteFile(channelsFile, bytes, 0644)
+	}
+}
+
+func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodGet {
+		s.channelsMu.RLock()
+		list := make([]*ChannelProfile, 0, len(s.channels))
+		for _, cp := range s.channels {
+			list = append(list, cp)
+		}
+		s.channelsMu.RUnlock()
+
+		sort.Slice(list, func(i, j int) bool {
+			if list[i].IsDefault != list[j].IsDefault {
+				return list[i].IsDefault
+			}
+			return list[i].Name < list[j].Name
+		})
+		json.NewEncoder(w).Encode(list)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req ChannelProfile
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+			http.Error(w, `{"error":"invalid channel data, name is required"}`, http.StatusBadRequest)
+			return
+		}
+
+		s.channelsMu.Lock()
+		defer s.channelsMu.Unlock()
+
+		if req.ID == "" {
+			slug := strings.ToLower(strings.TrimSpace(req.Name))
+			slug = regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(slug, "-")
+			slug = strings.Trim(slug, "-")
+			if slug == "" {
+				slug = fmt.Sprintf("ch-%d", time.Now().UnixMilli()%10000)
+			}
+			baseSlug := slug
+			counter := 1
+			for s.channels[slug] != nil {
+				slug = fmt.Sprintf("%s-%d", baseSlug, counter)
+				counter++
+			}
+			req.ID = slug
+		}
+
+		if req.Avatar == "" {
+			req.Avatar = "/assets/avatar.jpg"
+		}
+		if req.Voice == "" {
+			req.Voice = "vi-VN-NamMinhNeural"
+		}
+		if req.Theme == "" {
+			req.Theme = "random"
+		}
+
+		if req.IsDefault {
+			for _, cp := range s.channels {
+				cp.IsDefault = false
+			}
+		}
+
+		s.channels[req.ID] = &req
+		s.saveChannelsLocked()
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(req)
+		return
+	}
+
+	http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+}
+
+func (s *Server) handleChannelDetail(w http.ResponseWriter, r *http.Request) {
+	subPath := strings.TrimPrefix(r.URL.Path, "/api/channels/")
+	parts := strings.Split(subPath, "/")
+	channelID := parts[0]
+
+	if channelID == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Avatar upload: POST /api/channels/{id}/avatar
+	if len(parts) > 1 && parts[1] == "avatar" && r.Method == http.MethodPost {
+		err := r.ParseMultipartForm(10 << 20) // 10MB max
+		if err != nil {
+			http.Error(w, `{"error":"file too large or invalid multipart"}`, http.StatusBadRequest)
+			return
+		}
+
+		file, header, err := r.FormFile("avatar")
+		if err != nil {
+			http.Error(w, `{"error":"missing avatar file in form-data"}`, http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		ext := strings.ToLower(filepath.Ext(header.Filename))
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp" {
+			ext = ".jpg"
+		}
+
+		avatarDir := filepath.Join(s.cfg.ProjectDir, "assets", "channels")
+		_ = os.MkdirAll(avatarDir, 0755)
+
+		fileName := fmt.Sprintf("%s%s", channelID, ext)
+		destPath := filepath.Join(avatarDir, fileName)
+
+		destFile, err := os.Create(destPath)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"failed to save file: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+		defer destFile.Close()
+
+		if _, err := io.Copy(destFile, file); err != nil {
+			http.Error(w, fmt.Sprintf(`{"error":"failed to copy file: %v"}`, err), http.StatusInternalServerError)
+			return
+		}
+
+		avatarURL := fmt.Sprintf("/assets/channels/%s", fileName)
+
+		s.channelsMu.Lock()
+		if cp, ok := s.channels[channelID]; ok {
+			cp.Avatar = avatarURL
+			s.saveChannelsLocked()
+		}
+		s.channelsMu.Unlock()
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"avatar": avatarURL})
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		s.channelsMu.Lock()
+		defer s.channelsMu.Unlock()
+
+		if len(s.channels) <= 1 {
+			http.Error(w, `{"error":"cannot delete the only channel profile"}`, http.StatusBadRequest)
+			return
+		}
+
+		cp, ok := s.channels[channelID]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+
+		delete(s.channels, channelID)
+		if cp.IsDefault {
+			for _, remaining := range s.channels {
+				remaining.IsDefault = true
+				break
+			}
+		}
+		s.saveChannelsLocked()
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "deleted": channelID})
+		return
+	}
+
+	http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+}
+
 func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -1092,11 +1399,12 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var req struct {
-			URL     string `json:"url"`
-			Theme   string `json:"theme,omitempty"`
-			Voice   string `json:"voice,omitempty"`
-			Channel string `json:"channel,omitempty"`
-			Engine  string `json:"engine,omitempty"`
+			URL      string   `json:"url"`
+			Theme    string   `json:"theme,omitempty"`
+			Voice    string   `json:"voice,omitempty"`
+			Channel  string   `json:"channel,omitempty"`
+			Channels []string `json:"channels,omitempty"`
+			Engine   string   `json:"engine,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.URL == "" {
 			http.Error(w, `{"error":"missing url"}`, http.StatusBadRequest)
@@ -1113,28 +1421,116 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 			engine = "local"
 		}
 
-		jobID := fmt.Sprintf("%d", time.Now().UnixMilli())
-		job := &Job{
-			ID:        jobID,
-			URL:       req.URL,
-			Theme:     req.Theme,
-			Voice:     req.Voice,
-			Channel:   req.Channel,
-			Engine:    engine,
-			Status:    "queued",
-			Progress:  "Đang chờ xếp hàng...",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+		// Determine target channels
+		var targetChannels []*ChannelProfile
+		s.channelsMu.RLock()
+		if len(req.Channels) > 0 {
+			for _, chID := range req.Channels {
+				if cp, ok := s.channels[chID]; ok {
+					targetChannels = append(targetChannels, cp)
+				}
+			}
 		}
+		if len(targetChannels) == 0 {
+			if req.Channel != "" {
+				if cp, ok := s.channels[req.Channel]; ok {
+					targetChannels = append(targetChannels, cp)
+				} else {
+					targetChannels = append(targetChannels, &ChannelProfile{
+						ID:     "custom",
+						Name:   req.Channel,
+						Handle: s.cfg.TiktokHandle,
+						Avatar: "/assets/avatar.jpg",
+						Voice:  req.Voice,
+						Theme:  req.Theme,
+					})
+				}
+			} else {
+				var defaultCP *ChannelProfile
+				for _, cp := range s.channels {
+					if cp.IsDefault {
+						defaultCP = cp
+						break
+					}
+				}
+				if defaultCP != nil {
+					targetChannels = append(targetChannels, defaultCP)
+				} else {
+					targetChannels = append(targetChannels, &ChannelProfile{
+						ID:     "default",
+						Name:   s.cfg.ChannelName,
+						Handle: s.cfg.TiktokHandle,
+						Avatar: "/assets/avatar.jpg",
+						Voice:  req.Voice,
+						Theme:  req.Theme,
+					})
+				}
+			}
+		}
+		s.channelsMu.RUnlock()
+
+		createdJobs := make([]*Job, 0, len(targetChannels))
 
 		s.jobsMu.Lock()
-		s.jobs[jobID] = job
+		for i, cp := range targetChannels {
+			// Resolve theme: if specific theme requested in form, use it.
+			// If theme is "random" or empty, pick random concrete theme
+			jobTheme := req.Theme
+			if jobTheme == "" || jobTheme == "default" {
+				jobTheme = cp.Theme
+			}
+			if jobTheme == "random" || jobTheme == "" {
+				jobTheme = randomConcreteTheme()
+			}
+
+			// Resolve voice
+			jobVoice := req.Voice
+			if jobVoice == "" || jobVoice == "default" {
+				jobVoice = cp.Voice
+			}
+			if jobVoice == "" {
+				jobVoice = "vi-VN-NamMinhNeural"
+			}
+
+			jobID := fmt.Sprintf("%d", time.Now().UnixMilli())
+			if len(targetChannels) > 1 {
+				jobID = fmt.Sprintf("%d-%d", time.Now().UnixMilli(), i+1)
+			}
+
+			job := &Job{
+				ID:        jobID,
+				URL:       req.URL,
+				Theme:     jobTheme,
+				Voice:     jobVoice,
+				Channel:   cp.Name,
+				Handle:    cp.Handle,
+				Avatar:    cp.Avatar,
+				Engine:    engine,
+				Status:    "queued",
+				Progress:  "Đang chờ xếp hàng...",
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			}
+
+			s.jobs[jobID] = job
+			createdJobs = append(createdJobs, job)
+		}
 		s.jobsMu.Unlock()
 
-		s.jobQueue <- job
+		for _, job := range createdJobs {
+			s.jobQueue <- job
+		}
 
 		w.WriteHeader(http.StatusAccepted)
-		json.NewEncoder(w).Encode(job)
+		if len(createdJobs) == 1 {
+			json.NewEncoder(w).Encode(createdJobs[0])
+		} else {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status": "queued",
+				"count":  len(createdJobs),
+				"jobs":   createdJobs,
+			})
+		}
 		return
 	}
 
