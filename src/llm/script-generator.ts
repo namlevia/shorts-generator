@@ -105,7 +105,7 @@ CÁC TEMPLATE ĐƯỢC PHÉP DÙNG TRONG templateData:
   * Số phiên bản thập phân: "5.5" -> viết là "năm chấm năm" (không viết 5.5 vì AI sẽ đọc là năm rưỡi)
   * Số phần trăm: "82.7%" -> viết là "tám mươi hai phẩy bảy phần trăm"
   * Giá tiền: "5$" -> viết là "năm đô la"
-  * Tên kênh LeviaTech: viết là "Lê-vi-a Tếch" hoặc "Lê vi a tech" để AI đọc tự nhiên.
+  * Tên kênh LeviaTech: CHỈ trong voiceText mới phiên âm là "Lê-vi-a Tếch" để AI đọc tự nhiên. Còn trên màn hình (metadata.channel, templateData.channelName) BẮT BUỘC giữ nguyên "LeviaTech".
   * Tên riêng tiếng Anh nổi tiếng (Google, Apple, Microsoft, TikTok, Python) giữ nguyên.
 - Không dùng emoji, không dùng URL, không dùng ký tự đặc biệt (&, $, %, #, ->) trong voiceText.
 - Mỗi câu thoại voiceText kết thúc bằng dấu chấm (.) hoặc dấu hỏi (?).
@@ -117,7 +117,7 @@ function normalizeParsedJson(parsed: any, content: ScrapedContent, cfg: Config):
   parsed.version = "1.0";
   if (!parsed.metadata) parsed.metadata = {};
   if (!parsed.metadata.title) parsed.metadata.title = content.title;
-  parsed.metadata.channel = parsed.metadata.channel || channelName;
+  parsed.metadata.channel = channelName; // Always enforce canonical brand name on-screen
   parsed.metadata.source = {
     url: content.url,
     domain: content.domain,
@@ -210,7 +210,7 @@ function normalizeParsedJson(parsed: any, content: ScrapedContent, cfg: Config):
 
       case "outro":
         td.ctaTop = String(td.ctaTop || "Xem bản tin mới mỗi ngày").slice(0, 30);
-        td.channelName = String(td.channelName || channelName).slice(0, 30);
+        td.channelName = channelName; // Always enforce canonical brand name on-screen
         td.source = String(
           td.source && td.source !== "github.com" ? td.source : (content.displaySource || content.domain)
         ).slice(0, 80);
