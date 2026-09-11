@@ -67,21 +67,22 @@ Tùy chọn:
     await writeFile(scriptPath, JSON.stringify(script, null, 2), "utf8");
     log.info(`  Đã lưu kịch bản vào: output/${outDirName}/script.json`);
 
-    if (isDryRun) {
-      log.info("\n✅ Chế độ --dry-run: Đã sinh kịch bản thành công. Dừng trước bước render.");
-      console.log(`\nKiểm tra kịch bản tại: output/${outDirName}/script.json\n`);
-      return;
-    }
-
-    // 4. Run Video Pipeline
-    log.info("3/4. Đang kích hoạt pipeline tạo giọng đọc, ghép âm thanh & render video...");
-    await runPipeline(scriptPath);
-
-    // 5. Generate TikTok caption
-    log.info("4/4. Đang tạo caption & hashtags cho TikTok...");
+    // 4. Generate TikTok caption
+    log.info("  Đang tạo caption & hashtags...");
     const caption = await generateCaption(script.metadata.title, content.url, content.slug, cfg);
     const captionPath = join(outputDir, "caption.txt");
     await writeFile(captionPath, caption, "utf8");
+
+    if (isDryRun) {
+      log.info(`\n✅ Chế độ --dry-run: Đã sinh kịch bản & caption thành công.`);
+      console.log(`[Make] Output dir: ${outputDir}`);
+      console.log(`[Make] Script: ${scriptPath}`);
+      return;
+    }
+
+    // 5. Run Video Pipeline
+    log.info("3/4. Đang kích hoạt pipeline tạo giọng đọc, ghép âm thanh & render video...");
+    await runPipeline(scriptPath);
 
     console.log("\n" + "=".repeat(60));
     console.log("🎉 XUẤT VIDEO THÀNH CÔNG!");

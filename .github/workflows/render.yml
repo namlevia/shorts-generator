@@ -3,9 +3,17 @@ name: Render Shorts Video
 on:
   workflow_dispatch:
     inputs:
+      script_json:
+        description: 'Pre-generated script.json content'
+        required: false
+        default: ''
+      caption:
+        description: 'Pre-generated TikTok caption'
+        required: false
+        default: ''
       url:
-        description: 'GitHub repository or Article URL'
-        required: true
+        description: 'GitHub repository or Article URL (used if script_json is empty)'
+        required: false
         default: 'https://github.com/namlevia/AI-auto-generate-video'
       theme:
         description: 'Visual Theme (dark-neon / light-pro)'
@@ -19,18 +27,6 @@ on:
         description: 'Edge-TTS Voice ID'
         required: false
         default: 'vi-VN-NamMinhNeural'
-      llm_api_key:
-        description: 'LLM API Key (optional override)'
-        required: false
-        default: ''
-      llm_base_url:
-        description: 'LLM Base URL (optional override)'
-        required: false
-        default: ''
-      llm_model:
-        description: 'LLM Model (optional override)'
-        required: false
-        default: ''
   repository_dispatch:
     types: [generate-video]
 
@@ -60,19 +56,29 @@ jobs:
 
       - name: Generate Video
         env:
-          LLM_BASE_URL: ${{ inputs.llm_base_url || secrets.LLM_BASE_URL || vars.LLM_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/' }}
-          LLM_API_KEY: ${{ inputs.llm_api_key || secrets.LLM_API_KEY || secrets.GEMINI_API_KEY }}
-          LLM_MODEL: ${{ inputs.llm_model || vars.LLM_MODEL || 'gemini-2.0-flash' }}
+          SCRIPT_JSON: ${{ inputs.script_json }}
+          CAPTION_TEXT: ${{ inputs.caption }}
           TTS_PROVIDER: 'edge-tts'
           EDGE_TTS_VOICE: ${{ inputs.voice || 'vi-VN-NamMinhNeural' }}
           VIDEO_THEME: ${{ inputs.theme || 'dark-neon' }}
           CHANNEL_NAME: 'LeviaTech'
           TIKTOK_HANDLE: '@leviatech'
           TIKTOK_DISPLAY_NAME: 'LeviaTech'
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/' }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY || secrets.GEMINI_API_KEY }}
+          LLM_MODEL: 'gemini-2.0-flash'
         run: |
-          TARGET_URL="${{ inputs.url || github.event.client_payload.url }}"
-          echo "🚀 Generating video for: $TARGET_URL"
-          npx tsx src/make.ts "$TARGET_URL"
+          if [ -n "$SCRIPT_JSON" ]; then
+            echo "🎬 Nhận kịch bản từ local! Render video bằng cli.ts (không cần LLM)..."
+            mkdir -p output/cloud-render
+            node -e 'const fs = require("fs"); fs.writeFileSync("output/cloud-render/script.json", process.env.SCRIPT_JSON, "utf8");'
+            node -e 'const fs = require("fs"); fs.writeFileSync("output/cloud-render/caption.txt", process.env.CAPTION_TEXT || "", "utf8");'
+            npx tsx src/cli.ts output/cloud-render/script.json
+          else
+            TARGET_URL="${{ inputs.url || github.event.client_payload.url }}"
+            echo "🚀 Không có script_json, chạy quy trình đầy đủ với make.ts: $TARGET_URL"
+            npx tsx src/make.ts "$TARGET_URL"
+          fi
 
       - name: Upload Output Video Artifact
         uses: actions/upload-artifact@v4

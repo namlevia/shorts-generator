@@ -518,17 +518,97 @@ func (s *Server) processGitHubJob(job *Job) {
 		voice = "vi-VN-NamMinhNeural"
 	}
 
-	// 1. Dispatch workflow
+	// 1. Sinh kịch bản & caption tại Local (Raspberry Pi / PC) bằng local LLM
+	s.updateJob(job.ID, func(j *Job) {
+		j.Progress = "AI đang bóc tách nội dung & tạo kịch bản tại Local..."
+		j.UpdatedAt = time.Now()
+	})
+
+	if job.ChatID != 0 {
+		s.sendTelegramMessage(job.ChatID, fmt.Sprintf("🎬 [Job %s] Đang tạo kịch bản tại máy local...\n🔗 %s", job.ID, job.URL))
+	}
+
+	log.Printf("[Job %s] Generating script.json locally for: %s", job.ID, job.URL)
+
+	var dryCmd *exec.Cmd
+	if isWindows() {
+		dryCmd = exec.Command("cmd", "/c", "npx", "tsx", "src/make.ts", job.URL, "--dry-run")
+	} else {
+		dryCmd = exec.Command("npx", "tsx", "src/make.ts", job.URL, "--dry-run")
+	}
+	dryCmd.Dir = s.cfg.ProjectDir
+	dryCmd.Env = os.Environ()
+	if job.Theme != "" {
+		dryCmd.Env = append(dryCmd.Env, "VIDEO_THEME="+job.Theme)
+	}
+	if job.Voice != "" {
+		dryCmd.Env = append(dryCmd.Env, "EDGE_TTS_VOICE="+job.Voice)
+	}
+	if job.Channel != "" {
+		dryCmd.Env = append(dryCmd.Env, "CHANNEL_NAME="+job.Channel)
+	}
+
+	stdout, err := dryCmd.StdoutPipe()
+	if err != nil {
+		s.failJob(job, fmt.Sprintf("Lỗi stdout pipe khi tạo kịch bản local: %v", err))
+		return
+	}
+	dryCmd.Stderr = dryCmd.Stdout
+
+	if err := dryCmd.Start(); err != nil {
+		s.failJob(job, fmt.Sprintf("Lỗi khởi chạy tạo kịch bản local: %v", err))
+		return
+	}
+
+	scriptPath := ""
+	outputDir := ""
+	scriptRegex := regexp.MustCompile(`\[Make\]\s+Script:\s*(.+)`)
+	outDirRegex := regexp.MustCompile(`\[Make\]\s+Output dir:\s*(.+)`)
+
+	scanner := bufio.NewScanner(stdout)
+	for scanner.Scan() {
+		line := scanner.Text()
+		log.Printf("[Job %s DryRun] %s", job.ID, line)
+		if m := scriptRegex.FindStringSubmatch(line); len(m) > 1 {
+			scriptPath = strings.TrimSpace(m[1])
+		}
+		if m := outDirRegex.FindStringSubmatch(line); len(m) > 1 {
+			outputDir = strings.TrimSpace(m[1])
+		}
+	}
+
+	if err := dryCmd.Wait(); err != nil {
+		s.failJob(job, fmt.Sprintf("Quá trình tạo kịch bản local thất bại: %v", err))
+		return
+	}
+
+	if scriptPath == "" {
+		s.failJob(job, "Không tìm thấy file kịch bản script.json được tạo ra")
+		return
+	}
+
+	scriptBytes, err := os.ReadFile(scriptPath)
+	if err != nil {
+		s.failJob(job, fmt.Sprintf("Không thể đọc file kịch bản: %v", err))
+		return
+	}
+
+	captionBytes, _ := os.ReadFile(filepath.Join(outputDir, "caption.txt"))
+	localCaption := string(captionBytes)
+
+	// 2. Gửi kịch bản sang GitHub Actions để render thuần đồ họa + âm thanh
+	s.updateJob(job.ID, func(j *Job) {
+		j.Progress = "Đã có kịch bản! Đang gửi sang GitHub Actions để render video..."
+		j.UpdatedAt = time.Now()
+	})
+
 	dispatchURL := fmt.Sprintf("https://api.github.com/repos/%s/actions/workflows/%s/dispatches", repo, workflow)
 	inputs := map[string]string{
-		"url":   job.URL,
-		"theme": theme,
-		"voice": voice,
-	}
-	if s.cfg.LLMBaseURL != "" && !strings.Contains(s.cfg.LLMBaseURL, "localhost") && !strings.Contains(s.cfg.LLMBaseURL, "127.0.0.1") {
-		inputs["llm_base_url"] = s.cfg.LLMBaseURL
-		inputs["llm_api_key"] = s.cfg.LLMAPIKey
-		inputs["llm_model"] = s.cfg.LLMModel
+		"url":         job.URL,
+		"theme":       theme,
+		"voice":       voice,
+		"script_json": string(scriptBytes),
+		"caption":     localCaption,
 	}
 
 	dispatchPayload := map[string]interface{}{
@@ -662,6 +742,9 @@ func (s *Server) processGitHubJob(job *Job) {
 
 				// Download Artifact
 				outputDir, videoPath, caption := s.downloadGitHubArtifact(repo, activeRunID, token, job.ID)
+				if caption == "" {
+					caption = localCaption
+				}
 
 				s.updateJob(job.ID, func(j *Job) {
 					j.Status = "completed"
