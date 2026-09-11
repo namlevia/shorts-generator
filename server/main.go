@@ -1276,6 +1276,13 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 			for _, cp := range s.channels {
 				cp.IsDefault = false
 			}
+			s.cfgMu.Lock()
+			s.cfg.ChannelName = req.Name
+			s.cfg.TiktokHandle = req.Handle
+			os.Setenv("CHANNEL_NAME", req.Name)
+			os.Setenv("TIKTOK_HANDLE", req.Handle)
+			s.cfgMu.Unlock()
+			s.saveConfigToEnv()
 		}
 
 		s.channels[req.ID] = &req

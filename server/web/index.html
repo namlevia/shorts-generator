@@ -1267,18 +1267,10 @@
             <!-- Rendered dynamically via JS -->
           </div>
 
-          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secVoice">🎙 2. Cấu Hình Giọng Đọc & Thương Hiệu Mặc Định</h3>
+          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secVoice">🎙 3. Nhà Cung Cấp Giọng Đọc (TTS Provider)</h3>
           <div class="form-grid">
-            <div class="form-group">
-              <label data-i18n="settings.channelName">Tên Kênh Hiển Thị Mặc Định</label>
-              <input type="text" id="cfg-channel-name" placeholder="LeviaTech">
-            </div>
-            <div class="form-group">
-              <label data-i18n="settings.tiktokHandle">TikTok Handle Mặc Định</label>
-              <input type="text" id="cfg-tiktok-handle" placeholder="@leviatech">
-            </div>
-            <div class="form-group">
-              <label data-i18n="settings.ttsProvider">Nhà Cung Cấp TTS</label>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label data-i18n="settings.ttsProvider">Nhà Cung Cấp TTS (Text-to-Speech Engine)</label>
               <select id="cfg-tts-provider">
                 <option value="edge-tts" data-i18n="settings.ttsEdge">Edge-TTS (Miễn phí 100%, chất lượng cao)</option>
                 <option value="elevenlabs">ElevenLabs</option>
@@ -1288,7 +1280,7 @@
             </div>
           </div>
 
-          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secTelegram">💬 3. Cấu Hình Telegram Bot (Điều khiển từ xa)</h3>
+          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secTelegram">💬 4. Cấu Hình Telegram Bot (Điều khiển từ xa)</h3>
           <div class="form-grid">
             <div class="form-group" style="grid-column: 1 / -1;">
               <label data-i18n="settings.telegramToken">Telegram Bot Token (lấy từ @BotFather)</label>
@@ -1296,7 +1288,7 @@
             </div>
           </div>
 
-          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secEngine">☁️ 4. Chế Độ Render (Local / GitHub Actions)</h3>
+          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secEngine">☁️ 5. Chế Độ Render (Local / GitHub Actions)</h3>
           <div class="form-grid">
             <div class="form-group">
               <label data-i18n="settings.renderEngine">Chế Độ Render Mặc Định</label>
@@ -1503,7 +1495,7 @@
         "settings.btnSaveChannel": "💾 Lưu Kênh",
         "settings.btnSetDefault": "⭐ Đặt Mặc Định",
         "settings.isDefaultBadge": "Mặc Định",
-        "settings.secVoice": "🎙 3. Cấu Hình Giọng Đọc & Thương Hiệu Mặc Định",
+        "settings.secVoice": "🎙 3. Nhà Cung Cấp Giọng Đọc (TTS Provider)",
         "settings.channelName": "Tên Kênh Hiển Thị Mặc Định",
         "settings.tiktokHandle": "TikTok Handle Mặc Định",
         "settings.ttsProvider": "Nhà Cung Cấp TTS",
@@ -1633,7 +1625,7 @@
         "settings.btnSaveChannel": "💾 Save Channel",
         "settings.btnSetDefault": "⭐ Set Default",
         "settings.isDefaultBadge": "Default",
-        "settings.secVoice": "🎙 3. Voice Narration & Default Branding",
+        "settings.secVoice": "🎙 3. Text-to-Speech (TTS) Provider",
         "settings.channelName": "Default Channel Name",
         "settings.tiktokHandle": "Default TikTok Handle",
         "settings.ttsProvider": "TTS Provider",
@@ -2368,8 +2360,6 @@
         document.getElementById('cfg-llm-base-url').value = cfg.llm_base_url || '';
         document.getElementById('cfg-llm-api-key').value = cfg.llm_api_key || '';
         document.getElementById('cfg-llm-model').value = cfg.llm_model || '';
-        document.getElementById('cfg-channel-name').value = cfg.channel_name || 'LeviaTech';
-        document.getElementById('cfg-tiktok-handle').value = cfg.tiktok_handle || '@leviatech';
         document.getElementById('cfg-tts-provider').value = cfg.tts_provider || 'edge-tts';
         document.getElementById('cfg-telegram-token').value = cfg.telegram_token || '';
         document.getElementById('cfg-render-engine').value = cfg.render_engine || 'local';
@@ -2387,8 +2377,6 @@
         llm_base_url: document.getElementById('cfg-llm-base-url').value.trim(),
         llm_api_key: document.getElementById('cfg-llm-api-key').value.trim(),
         llm_model: document.getElementById('cfg-llm-model').value.trim(),
-        channel_name: document.getElementById('cfg-channel-name').value.trim(),
-        tiktok_handle: document.getElementById('cfg-tiktok-handle').value.trim(),
         tts_provider: document.getElementById('cfg-tts-provider').value,
         telegram_token: document.getElementById('cfg-telegram-token').value.trim(),
         render_engine: document.getElementById('cfg-render-engine').value,
