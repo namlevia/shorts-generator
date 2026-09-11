@@ -258,13 +258,14 @@ Hãy tạo file script.json hoàn chỉnh cho video này theo đúng hướng d�
         { role: "user", content: userPrompt },
       ],
       temperature: 0.7,
+      max_tokens: 4096,
     },
     {
       headers: {
         Authorization: `Bearer ${cfg.llm.apiKey}`,
         "Content-Type": "application/json",
       },
-      timeout: 60000,
+      timeout: 90000,
     }
   );
 
@@ -274,8 +275,15 @@ Hãy tạo file script.json hoàn chỉnh cho video này theo đúng hướng d�
   }
 
   // Clean markdown json fences
-  const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawText];
-  const jsonStr = (jsonMatch[1] ?? rawText).trim();
+  const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  let jsonStr = (jsonMatch ? jsonMatch[1] : rawText).trim();
+
+  // Robust fallback: isolate the outer JSON object { ... }
+  const firstBrace = jsonStr.indexOf('{');
+  const lastBrace = jsonStr.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+  }
 
   let parsedJson: any;
   try {
