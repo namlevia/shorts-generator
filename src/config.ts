@@ -2,7 +2,13 @@ import { config } from "dotenv";
 config({ path: [".env.local", ".env"] });
 
 export type TtsProvider = "edge-tts" | "lucylab" | "elevenlabs" | "vbee";
-export type VideoTheme = "dark-neon" | "light-pro";
+export type VideoTheme =
+  | "dark-neon"
+  | "cyberpunk-glitch"
+  | "liquid-aurora"
+  | "bold-poster"
+  | "pentagram-stat"
+  | "light-pro";
 
 export interface TiktokConfig {
   displayName: string;
@@ -135,8 +141,16 @@ export function loadConfig(): Config {
   }
 
   const videoTheme = (process.env.VIDEO_THEME ?? "dark-neon") as VideoTheme;
-  if (videoTheme !== "dark-neon" && videoTheme !== "light-pro") {
-    throw new Error(`VIDEO_THEME must be "dark-neon" or "light-pro", got "${videoTheme}"`);
+  const validThemes: VideoTheme[] = [
+    "dark-neon",
+    "cyberpunk-glitch",
+    "liquid-aurora",
+    "bold-poster",
+    "pentagram-stat",
+    "light-pro",
+  ];
+  if (!validThemes.includes(videoTheme)) {
+    throw new Error(`VIDEO_THEME must be one of [${validThemes.join(", ")}], got "${videoTheme}"`);
   }
 
   return {

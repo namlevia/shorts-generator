@@ -16,12 +16,16 @@ on:
         required: false
         default: 'https://github.com/namlevia/AI-auto-generate-video'
       theme:
-        description: 'Visual Theme (dark-neon / light-pro)'
+        description: 'Visual Theme (dark-neon / cyberpunk-glitch / liquid-aurora / bold-poster / pentagram-stat / light-pro)'
         required: false
         default: 'dark-neon'
         type: choice
         options:
           - dark-neon
+          - cyberpunk-glitch
+          - liquid-aurora
+          - bold-poster
+          - pentagram-stat
           - light-pro
       voice:
         description: 'Edge-TTS Voice ID'

@@ -268,6 +268,74 @@
       gap: 20px;
     }
 
+    /* THEME CARDS SELECTOR */
+    .theme-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .theme-card {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    .theme-card:hover {
+      background: rgba(30, 41, 59, 0.85);
+      border-color: rgba(34, 211, 238, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .theme-card.active {
+      background: rgba(34, 211, 238, 0.09);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.25);
+    }
+
+    .tc-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .tc-icon {
+      font-size: 16px;
+    }
+
+    .tc-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tc-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.3;
+      margin-bottom: 10px;
+    }
+
+    .tc-accent-bar {
+      height: 3px;
+      border-radius: 3px;
+      width: 100%;
+    }
+
     .btn-submit {
       width: 100%;
       padding: 16px 24px;
@@ -544,15 +612,79 @@
             <input type="text" id="input-url" data-i18n-placeholder="studio.urlPlaceholder" placeholder="https://github.com/dabeecao/telecloud-go" required>
           </div>
 
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="select-theme" data-i18n="studio.themeLabel">Giao Diện Đồ Họa (Theme)</label>
-              <select id="select-theme">
-                <option value="dark-neon" data-i18n="studio.themeDarkNeon">Dark Neon (Mặc định - Màu Cyberpunk, Glow lung linh)</option>
-                <option value="light-pro" data-i18n="studio.themeLightPro">Light Pro (Trắng sáng, Tinh tế, Chuyên nghiệp)</option>
-              </select>
+          <!-- THEME SELECTION WITH VISUAL CARDS -->
+          <div class="form-group" style="margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label for="select-theme" data-i18n="studio.themeLabel" style="margin-bottom: 0;">Giao Diện Đồ Họa & Mẫu Thiết Kế (Theme)</label>
+              <span id="theme-selected-badge" style="font-size: 12px; font-weight: 600; font-family: 'Space Mono', monospace; color: var(--accent-cyan); background: rgba(34,211,238,0.12); border: 1px solid rgba(34,211,238,0.3); padding: 3px 10px; border-radius: 6px;">Dark Neon</span>
             </div>
+            <select id="select-theme" onchange="syncThemeChips()">
+              <option value="dark-neon" data-i18n="studio.themeDarkNeon">Dark Neon (Mặc định - Màu Cyberpunk, Glow lung linh)</option>
+              <option value="cyberpunk-glitch" data-i18n="studio.themeCyberpunkGlitch">Cyberpunk Glitch (RGB Split & Matrix Scanlines)</option>
+              <option value="liquid-aurora" data-i18n="studio.themeLiquidAurora">Liquid Aurora (Gradient Fluid & Glassmorphism)</option>
+              <option value="bold-poster" data-i18n="studio.themeBoldPoster">Bold Editorial Poster (Phong cách Poster Thụy Sĩ)</option>
+              <option value="pentagram-stat" data-i18n="studio.themePentagramStat">Pentagram Dark Stat (Số liệu Neon Amber & High-Tech)</option>
+              <option value="light-pro" data-i18n="studio.themeLightPro">Light Pro (Trắng sáng, Tinh tế, Chuyên nghiệp)</option>
+            </select>
 
+            <div class="theme-cards-grid" id="theme-cards-container">
+              <div class="theme-card active" data-theme-val="dark-neon" onclick="selectThemeChip('dark-neon')">
+                <div class="tc-header">
+                  <span class="tc-icon">🌌</span>
+                  <span class="tc-title">Dark Neon</span>
+                </div>
+                <div class="tc-desc" data-i18n="studio.descDarkNeon">Cyberpunk Glow</div>
+                <div class="tc-accent-bar" style="background: linear-gradient(90deg, #22d3ee, #7c3aed);"></div>
+              </div>
+
+              <div class="theme-card" data-theme-val="cyberpunk-glitch" onclick="selectThemeChip('cyberpunk-glitch')">
+                <div class="tc-header">
+                  <span class="tc-icon">👾</span>
+                  <span class="tc-title">Glitch HUD</span>
+                </div>
+                <div class="tc-desc" data-i18n="studio.descCyberpunkGlitch">RGB Split & Matrix</div>
+                <div class="tc-accent-bar" style="background: linear-gradient(90deg, #ff0055, #00ffff);"></div>
+              </div>
+
+              <div class="theme-card" data-theme-val="liquid-aurora" onclick="selectThemeChip('liquid-aurora')">
+                <div class="tc-header">
+                  <span class="tc-icon">✨</span>
+                  <span class="tc-title">Liquid Aurora</span>
+                </div>
+                <div class="tc-desc" data-i18n="studio.descLiquidAurora">Fluid Mesh Gradient</div>
+                <div class="tc-accent-bar" style="background: linear-gradient(90deg, #ff5e36, #7928ca);"></div>
+              </div>
+
+              <div class="theme-card" data-theme-val="bold-poster" onclick="selectThemeChip('bold-poster')">
+                <div class="tc-header">
+                  <span class="tc-icon">📰</span>
+                  <span class="tc-title">Bold Poster</span>
+                </div>
+                <div class="tc-desc" data-i18n="studio.descBoldPoster">Swiss Editorial Typo</div>
+                <div class="tc-accent-bar" style="background: linear-gradient(90deg, #ff2d55, #f5f5f7);"></div>
+              </div>
+
+              <div class="theme-card" data-theme-val="pentagram-stat" onclick="selectThemeChip('pentagram-stat')">
+                <div class="tc-header">
+                  <span class="tc-icon">⚡</span>
+                  <span class="tc-title">Pentagram Stat</span>
+                </div>
+                <div class="tc-desc" data-i18n="studio.descPentagramStat">Amber Neon High-Tech</div>
+                <div class="tc-accent-bar" style="background: linear-gradient(90deg, #ff9f1c, #00ffff);"></div>
+              </div>
+
+              <div class="theme-card" data-theme-val="light-pro" onclick="selectThemeChip('light-pro')">
+                <div class="tc-header">
+                  <span class="tc-icon">☀️</span>
+                  <span class="tc-title">Light Pro</span>
+                </div>
+                <div class="tc-desc" data-i18n="studio.descLightPro">Trắng sáng tinh tế</div>
+                <div class="tc-accent-bar" style="background: linear-gradient(90deg, #3b82f6, #06b6d4);"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-grid">
             <div class="form-group">
               <label for="select-voice" data-i18n="studio.voiceLabel">Giọng Đọc AI (Edge-TTS)</label>
               <select id="select-voice">
@@ -734,9 +866,19 @@
         "studio.subtitle": "Nhập URL kho mã nguồn GitHub hoặc bài báo công nghệ, AI sẽ tự động biên soạn, lồng tiếng và render thành video 9:16 Full HD.",
         "studio.urlLabel": "Đường Dẫn Nguồn (GitHub Repo / Bài Báo)",
         "studio.urlPlaceholder": "https://github.com/dabeecao/telecloud-go",
-        "studio.themeLabel": "Giao Diện Đồ Họa (Theme)",
+        "studio.themeLabel": "Giao Diện Đồ Họa & Mẫu Thiết Kế (Theme)",
         "studio.themeDarkNeon": "Dark Neon (Mặc định - Màu Cyberpunk, Glow lung linh)",
+        "studio.themeCyberpunkGlitch": "Cyberpunk Glitch (RGB Split & Matrix Scanlines)",
+        "studio.themeLiquidAurora": "Liquid Aurora (Gradient Fluid & Glassmorphism)",
+        "studio.themeBoldPoster": "Bold Editorial Poster (Phong cách Poster Thụy Sĩ)",
+        "studio.themePentagramStat": "Pentagram Dark Stat (Số liệu Neon Amber & High-Tech)",
         "studio.themeLightPro": "Light Pro (Trắng sáng, Tinh tế, Chuyên nghiệp)",
+        "studio.descDarkNeon": "Cyberpunk Glow",
+        "studio.descCyberpunkGlitch": "RGB Split & Matrix",
+        "studio.descLiquidAurora": "Fluid Mesh Gradient",
+        "studio.descBoldPoster": "Swiss Editorial Typo",
+        "studio.descPentagramStat": "Amber Neon High-Tech",
+        "studio.descLightPro": "Trắng sáng tinh tế",
         "studio.voiceLabel": "Giọng Đọc AI (Edge-TTS)",
         "studio.voiceNamMinh": "Nam miền Bắc (Nam Minh - Truyền cảm, chuẩn tin tức)",
         "studio.voiceHoaiMy": "Nữ miền Bắc (Hoài My - Trẻ trung, năng động)",
@@ -818,9 +960,19 @@
         "studio.subtitle": "Enter a GitHub repository URL or tech article. AI will write scripts, synthesize voiceover, and render a 9:16 Full HD video.",
         "studio.urlLabel": "Source URL (GitHub Repo / Tech Article)",
         "studio.urlPlaceholder": "https://github.com/dabeecao/telecloud-go",
-        "studio.themeLabel": "Visual Theme",
+        "studio.themeLabel": "Visual Theme & Layout Preset",
         "studio.themeDarkNeon": "Dark Neon (Default - Cyberpunk glow aesthetic)",
-        "studio.themeLightPro": "Light Pro (Clean, Crisp, Professional)",
+        "studio.themeCyberpunkGlitch": "Cyberpunk Glitch (RGB Split, Scanlines, Hacker HUD)",
+        "studio.themeLiquidAurora": "Liquid Aurora (Fluid Gradient Blobs, Frosted Glass)",
+        "studio.themeBoldPoster": "Bold Editorial Poster (Swiss Minimal Typo, Magazine Layout)",
+        "studio.themePentagramStat": "Pentagram Dark Stat (Electric Amber Stat, Tech Grid)",
+        "studio.themeLightPro": "Light Pro (Clean White, Crisp & Professional)",
+        "studio.descDarkNeon": "Cyberpunk Glow",
+        "studio.descCyberpunkGlitch": "RGB Split & Matrix",
+        "studio.descLiquidAurora": "Fluid Mesh Gradient",
+        "studio.descBoldPoster": "Swiss Editorial Typo",
+        "studio.descPentagramStat": "Amber Neon High-Tech",
+        "studio.descLightPro": "Clean White Crisp",
         "studio.voiceLabel": "AI Voice Narrator (Edge-TTS)",
         "studio.voiceNamMinh": "Male Northern VN (Nam Minh - Expressive, News anchor)",
         "studio.voiceHoaiMy": "Female Northern VN (Hoài My - Young, Dynamic)",
@@ -927,6 +1079,35 @@
 
       // Re-render table if jobs loaded
       renderJobsTable(currentJobs);
+
+      // Re-sync theme chips and badge
+      syncThemeChips();
+    }
+
+    function syncThemeChips() {
+      const sel = document.getElementById('select-theme');
+      if (!sel) return;
+      const val = sel.value;
+      const cards = document.querySelectorAll('.theme-card');
+      cards.forEach(c => {
+        if (c.getAttribute('data-theme-val') === val) {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+      const badge = document.getElementById('theme-selected-badge');
+      if (badge && sel.selectedIndex >= 0) {
+        const opt = sel.options[sel.selectedIndex];
+        badge.textContent = opt.text.split('(')[0].trim();
+      }
+    }
+
+    function selectThemeChip(themeVal) {
+      const sel = document.getElementById('select-theme');
+      if (!sel) return;
+      sel.value = themeVal;
+      syncThemeChips();
     }
 
     function switchTab(tabId, el) {

@@ -281,6 +281,42 @@ function normalizeParsedJson(parsed: any, content: ScrapedContent, cfg: Config):
     }
   });
 
+  // Enforce specific theme template for opening scene if requested
+  if (parsed.scenes.length > 0) {
+    const s0 = parsed.scenes[0];
+    if (cfg.videoTheme === "cyberpunk-glitch" && s0.templateData.template !== "glitch-title") {
+      s0.templateData = {
+        template: "glitch-title",
+        headline: (s0.templateData.headline || content.title).slice(0, 50),
+        subtitle: (s0.templateData.subhead || "BƯỚC ĐỘT PHÁ CÔNG NGHỆ MỚI").slice(0, 80),
+        tag: "SIGNAL · TECH",
+      };
+    } else if (cfg.videoTheme === "liquid-aurora" && s0.templateData.template !== "liquid-hero") {
+      s0.templateData = {
+        template: "liquid-hero",
+        headline: (s0.templateData.headline || content.title).slice(0, 45),
+        subhead: (s0.templateData.subhead || "Công nghệ tương lai định hình thế giới").slice(0, 60),
+        badge: "HOT UPDATE",
+      };
+    } else if (cfg.videoTheme === "bold-poster" && s0.templateData.template !== "bold-poster") {
+      s0.templateData = {
+        template: "bold-poster",
+        headline: (s0.templateData.headline || content.title).slice(0, 45),
+        subhead: (s0.templateData.subhead || "Đột phá công nghệ thế hệ mới").slice(0, 60),
+        giantNumber: "01",
+      };
+    } else if (cfg.videoTheme === "pentagram-stat" && s0.templateData.template !== "pentagram-stat") {
+      s0.templateData = {
+        template: "pentagram-stat",
+        anchorNumber: "01",
+        eyebrow: "CHỈ SỐ ĐỘT PHÁ",
+        statValue: "10x",
+        statLabel: "Hiệu năng tăng trưởng vượt bậc",
+        context: "Được chứng thực bởi cộng đồng công nghệ quốc tế",
+      };
+    }
+  }
+
   return parsed;
 }
 
@@ -320,12 +356,25 @@ export async function generateScriptWithLlm(
   const channelName = cfg.tiktok.displayName || "LeviaTech";
   const truncatedContent = (content.content || "").slice(0, 2500);
 
+  let themeDirective = "";
+  if (cfg.videoTheme === "cyberpunk-glitch") {
+    themeDirective = `\n- PHONG CÁCH GIAO DIỆN: Cyberpunk Glitch. Cảnh 1 (hook) BẮT BUỘC dùng template "glitch-title" (tag SIGNAL hoặc CYBER).`;
+  } else if (cfg.videoTheme === "liquid-aurora") {
+    themeDirective = `\n- PHONG CÁCH GIAO DIỆN: Liquid Aurora Fluid. Cảnh 1 (hook) BẮT BUỘC dùng template "liquid-hero" (headline sang trọng, subhead ấn tượng).`;
+  } else if (cfg.videoTheme === "bold-poster") {
+    themeDirective = `\n- PHONG CÁCH GIAO DIỆN: Bold Editorial Poster Thụy Sĩ. Cảnh 1 (hook) BẮT BUỘC dùng template "bold-poster" (headline 3 dòng ngắn gọn, giantNumber ví dụ 01, 2026).`;
+  } else if (cfg.videoTheme === "pentagram-stat") {
+    themeDirective = `\n- PHONG CÁCH GIAO DIỆN: Pentagram Dark Stat High-Tech. Cảnh 1 (hook) BẮT BUỘC dùng template "pentagram-stat" (anchorNumber, eyebrow, statValue ví dụ 10x, 99%, statLabel).`;
+  } else if (cfg.videoTheme === "light-pro") {
+    themeDirective = `\n- PHONG CÁCH GIAO DIỆN: Light Pro tinh tế, tối giản, nền sáng sang trọng.`;
+  }
+
   const userPrompt = `Hãy tạo một đối tượng JSON cấu trúc dữ liệu cho kịch bản video ngắn công nghệ cho dự án sau:
 - Tiêu đề: ${content.title}
 - Nguồn domain: ${content.domain}
 - URL: ${content.url}
 - Ảnh og:image: ${content.ogImage ?? "null"}
-- Tên kênh: ${channelName}
+- Tên kênh: ${channelName}${themeDirective}
 
 NỘI DUNG TÓM TẮT DỰ ÁN:
 ${truncatedContent}

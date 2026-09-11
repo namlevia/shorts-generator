@@ -295,10 +295,19 @@ func (s *Server) handleWebUI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	indexHTML, err := webFS.ReadFile("web/index.html")
-	if err != nil {
-		http.Error(w, "WebUI not found", http.StatusInternalServerError)
-		return
+	var indexHTML []byte
+	var err error
+
+	// Try reading from disk first for instant hot-reload during development
+	diskPath := filepath.Join(s.cfg.ProjectDir, "server", "web", "index.html")
+	if bytes, diskErr := os.ReadFile(diskPath); diskErr == nil {
+		indexHTML = bytes
+	} else {
+		indexHTML, err = webFS.ReadFile("web/index.html")
+		if err != nil {
+			http.Error(w, "WebUI not found", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Dynamic replacement of port
