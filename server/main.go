@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"context"
@@ -38,6 +39,10 @@ type Config struct {
 	ChannelName       string `json:"channel_name"`
 	TiktokHandle      string `json:"tiktok_handle"`
 	TTSProvider       string `json:"tts_provider"`
+	RenderEngine      string `json:"render_engine"`   // "local" or "github"
+	GitHubRepo        string `json:"github_repo"`     // "namlevia/shorts-generator"
+	GitHubToken       string `json:"github_token"`    // Personal Access Token
+	GitHubWorkflow    string `json:"github_workflow"` // "render.yml"
 }
 
 // Job represents a video generation request
@@ -47,7 +52,8 @@ type Job struct {
 	Theme     string    `json:"theme,omitempty"`
 	Voice     string    `json:"voice,omitempty"`
 	Channel   string    `json:"channel,omitempty"`
-	Status    string    `json:"status"` // queued, processing, completed, failed
+	Engine    string    `json:"engine,omitempty"` // "local" or "github"
+	Status    string    `json:"status"`           // queued, processing, completed, failed
 	Progress  string    `json:"progress,omitempty"`
 	VideoPath string    `json:"video_path,omitempty"`
 	OutputDir string    `json:"output_dir,omitempty"`
@@ -127,6 +133,10 @@ func main() {
 		ChannelName:       os.Getenv("CHANNEL_NAME"),
 		TiktokHandle:      os.Getenv("TIKTOK_HANDLE"),
 		TTSProvider:       os.Getenv("TTS_PROVIDER"),
+		RenderEngine:      os.Getenv("RENDER_ENGINE"),
+		GitHubRepo:        os.Getenv("GITHUB_REPO"),
+		GitHubToken:       os.Getenv("GITHUB_TOKEN"),
+		GitHubWorkflow:    os.Getenv("GITHUB_WORKFLOW"),
 	}
 	if cfg.LLMModel == "" {
 		cfg.LLMModel = "gemini-3.8-flash"
@@ -139,6 +149,15 @@ func main() {
 	}
 	if cfg.TTSProvider == "" {
 		cfg.TTSProvider = "edge-tts"
+	}
+	if cfg.RenderEngine == "" {
+		cfg.RenderEngine = "local"
+	}
+	if cfg.GitHubRepo == "" {
+		cfg.GitHubRepo = "namlevia/shorts-generator"
+	}
+	if cfg.GitHubWorkflow == "" {
+		cfg.GitHubWorkflow = "render.yml"
 	}
 
 	s := &Server{
@@ -154,6 +173,12 @@ func main() {
 	log.Printf("🚀 Shorts Generator Studio (Golang Server)")
 	log.Printf("📁 Project Root : %s", cfg.ProjectDir)
 	log.Printf("🔌 WebUI & API  : http://localhost:%s", cfg.Port)
+	log.Printf("⚙️ Render Engine : %s (default)", cfg.RenderEngine)
+	if cfg.GitHubToken != "" {
+		log.Printf("☁️ GitHub Actions: Configured (%s)", cfg.GitHubRepo)
+	} else {
+		log.Printf("☁️ GitHub Actions: Token not set (configure in Settings)")
+	}
 	if cfg.TelegramToken != "" {
 		log.Printf("🤖 Telegram Bot : Enabled (polling active)")
 	} else {
@@ -295,15 +320,40 @@ func (s *Server) worker() {
 func (s *Server) processJob(job *Job) {
 	s.updateJob(job.ID, func(j *Job) {
 		j.Status = "processing"
+		j.Progress = "Bắt đầu xử lý..."
+		j.UpdatedAt = time.Now()
+	})
+
+	s.cfgMu.RLock()
+	defaultEngine := s.cfg.RenderEngine
+	s.cfgMu.RUnlock()
+
+	engine := job.Engine
+	if engine == "" || engine == "auto" {
+		engine = defaultEngine
+	}
+	if engine == "" {
+		engine = "local"
+	}
+
+	if engine == "github" {
+		s.processGitHubJob(job)
+	} else {
+		s.processLocalJob(job)
+	}
+}
+
+func (s *Server) processLocalJob(job *Job) {
+	s.updateJob(job.ID, func(j *Job) {
 		j.Progress = "Bắt đầu cào nội dung và tạo kịch bản..."
 		j.UpdatedAt = time.Now()
 	})
 
 	if job.ChatID != 0 {
-		s.sendTelegramMessage(job.ChatID, fmt.Sprintf("🎬 [Job %s] Đang xử lý:\n🔗 %s\n⏳ Đang cào nội dung và sinh kịch bản...", job.ID, job.URL))
+		s.sendTelegramMessage(job.ChatID, fmt.Sprintf("🎬 [Job %s] Đang xử lý (Local):\n🔗 %s\n⏳ Đang cào nội dung và sinh kịch bản...", job.ID, job.URL))
 	}
 
-	log.Printf("[Job %s] Executing pipeline for: %s", job.ID, job.URL)
+	log.Printf("[Job %s] Executing local pipeline for: %s", job.ID, job.URL)
 
 	// Command: npx tsx src/make.ts <URL>
 	var cmd *exec.Cmd
@@ -435,6 +485,303 @@ func (s *Server) processJob(job *Job) {
 	}
 }
 
+func (s *Server) processGitHubJob(job *Job) {
+	s.cfgMu.RLock()
+	token := s.cfg.GitHubToken
+	repo := s.cfg.GitHubRepo
+	workflow := s.cfg.GitHubWorkflow
+	s.cfgMu.RUnlock()
+
+	if repo == "" {
+		repo = "namlevia/shorts-generator"
+	}
+	if workflow == "" {
+		workflow = "render.yml"
+	}
+
+	if token == "" {
+		s.failJob(job, "Chưa cấu hình GitHub Personal Access Token (PAT). Vui lòng vào Cài Đặt để cập nhật token.")
+		return
+	}
+
+	s.updateJob(job.ID, func(j *Job) {
+		j.Progress = "Đang gửi lệnh kích hoạt sang GitHub Actions..."
+		j.UpdatedAt = time.Now()
+	})
+
+	theme := job.Theme
+	if theme == "" {
+		theme = "dark-neon"
+	}
+	voice := job.Voice
+	if voice == "" {
+		voice = "vi-VN-NamMinhNeural"
+	}
+
+	// 1. Dispatch workflow
+	dispatchURL := fmt.Sprintf("https://api.github.com/repos/%s/actions/workflows/%s/dispatches", repo, workflow)
+	dispatchPayload := map[string]interface{}{
+		"ref": "main",
+		"inputs": map[string]string{
+			"url":   job.URL,
+			"theme": theme,
+			"voice": voice,
+		},
+	}
+	bodyBytes, _ := json.Marshal(dispatchPayload)
+
+	req, err := http.NewRequest(http.MethodPost, dispatchURL, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		s.failJob(job, fmt.Sprintf("Lỗi tạo HTTP request GitHub: %v", err))
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		s.failJob(job, fmt.Sprintf("Gọi GitHub API thất bại: %v", err))
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		s.failJob(job, fmt.Sprintf("GitHub Actions trả về lỗi (HTTP %d): %s", resp.StatusCode, string(respBody)))
+		return
+	}
+
+	log.Printf("[Job %s] Dispatched GitHub Actions workflow successfully: %s", job.ID, dispatchURL)
+
+	s.updateJob(job.ID, func(j *Job) {
+		j.Progress = "Đã kích hoạt GitHub Actions! Đang đợi Runner nhận việc..."
+		j.UpdatedAt = time.Now()
+	})
+
+	if job.ChatID != 0 {
+		s.sendTelegramMessage(job.ChatID, fmt.Sprintf("☁️ [Job %s] Đã gửi lệnh render sang GitHub Actions!\nĐang đợi máy chủ đám mây xử lý...", job.ID))
+	}
+
+	// Wait 5s before finding the newly started run
+	time.Sleep(5 * time.Second)
+
+	runsURL := fmt.Sprintf("https://api.github.com/repos/%s/actions/workflows/%s/runs?per_page=3", repo, workflow)
+	var activeRunID int64
+	var runHTMLURL string
+
+	for attempt := 0; attempt < 8; attempt++ {
+		rReq, _ := http.NewRequest(http.MethodGet, runsURL, nil)
+		rReq.Header.Set("Authorization", "Bearer "+token)
+		rReq.Header.Set("Accept", "application/vnd.github+json")
+		rReq.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+		rResp, err := client.Do(rReq)
+		if err == nil && rResp.StatusCode == http.StatusOK {
+			var runsData struct {
+				WorkflowRuns []struct {
+					ID        int64     `json:"id"`
+					HTMLURL   string    `json:"html_url"`
+					CreatedAt time.Time `json:"created_at"`
+					Status    string    `json:"status"`
+				} `json:"workflow_runs"`
+			}
+			json.NewDecoder(rResp.Body).Decode(&runsData)
+			rResp.Body.Close()
+
+			if len(runsData.WorkflowRuns) > 0 {
+				latest := runsData.WorkflowRuns[0]
+				if time.Since(latest.CreatedAt) < 3*time.Minute {
+					activeRunID = latest.ID
+					runHTMLURL = latest.HTMLURL
+					break
+				}
+			}
+		} else if rResp != nil {
+			rResp.Body.Close()
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+	if activeRunID == 0 {
+		s.updateJob(job.ID, func(j *Job) {
+			j.Progress = "Đã kích hoạt GitHub Actions. Xem tab Actions trên GitHub."
+			j.UpdatedAt = time.Now()
+		})
+		log.Printf("[Job %s] Could not locate run ID within timeout, but dispatch was successful.", job.ID)
+		return
+	}
+
+	log.Printf("[Job %s] Tracking GitHub Actions Run #%d: %s", job.ID, activeRunID, runHTMLURL)
+
+	// Poll until completed (max 20 minutes)
+	pollURL := fmt.Sprintf("https://api.github.com/repos/%s/actions/runs/%d", repo, activeRunID)
+	maxWait := 20 * time.Minute
+	startTime := time.Now()
+
+	for time.Since(startTime) < maxWait {
+		time.Sleep(7 * time.Second)
+
+		pReq, _ := http.NewRequest(http.MethodGet, pollURL, nil)
+		pReq.Header.Set("Authorization", "Bearer "+token)
+		pReq.Header.Set("Accept", "application/vnd.github+json")
+		pReq.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+		pResp, err := client.Do(pReq)
+		if err != nil {
+			continue
+		}
+
+		var runDetail struct {
+			Status     string `json:"status"`     // queued, in_progress, completed
+			Conclusion string `json:"conclusion"` // success, failure, cancelled
+			HTMLURL    string `json:"html_url"`
+		}
+		json.NewDecoder(pResp.Body).Decode(&runDetail)
+		pResp.Body.Close()
+
+		if runDetail.Status == "in_progress" || runDetail.Status == "queued" {
+			s.updateJob(job.ID, func(j *Job) {
+				j.Progress = fmt.Sprintf("Cloud Runner đang render... (<a href='%s' target='_blank' style='color:#22d3ee;'>Xem log</a>)", runHTMLURL)
+				j.UpdatedAt = time.Now()
+			})
+		} else if runDetail.Status == "completed" {
+			if runDetail.Conclusion == "success" {
+				s.updateJob(job.ID, func(j *Job) {
+					j.Progress = "Render cloud thành công! Đang tải video hoàn chỉnh về máy..."
+					j.UpdatedAt = time.Now()
+				})
+
+				// Download Artifact
+				outputDir, videoPath, caption := s.downloadGitHubArtifact(repo, activeRunID, token, job.ID)
+
+				s.updateJob(job.ID, func(j *Job) {
+					j.Status = "completed"
+					j.Progress = "Hoàn thành 100% qua GitHub Actions"
+					j.OutputDir = outputDir
+					j.VideoPath = videoPath
+					j.Caption = caption
+					j.UpdatedAt = time.Now()
+				})
+
+				log.Printf("[Job %s] COMPLETED via GitHub Actions (Run %d)", job.ID, activeRunID)
+
+				if job.ChatID != 0 {
+					if videoPath != "" {
+						s.sendTelegramVideo(job.ChatID, videoPath, fmt.Sprintf("🎉 Video đã tạo thành công qua GitHub Actions!\n\n%s", caption))
+					} else {
+						s.sendTelegramMessage(job.ChatID, fmt.Sprintf("🎉 Video đã tạo thành công qua GitHub Actions!\n🔗 Xem run: %s", runHTMLURL))
+					}
+				}
+				return
+			} else {
+				s.failJob(job, fmt.Sprintf("GitHub Actions kết thúc với trạng thái: %s (<a href='%s' target='_blank' style='color:#ef4444;'>Xem chi tiết</a>)", runDetail.Conclusion, runHTMLURL))
+				return
+			}
+		}
+	}
+
+	s.failJob(job, "Hết thời gian chờ GitHub Actions (timeout 20 phút)")
+}
+
+func (s *Server) downloadGitHubArtifact(repo string, runID int64, token string, jobID string) (outputDir, videoPath, caption string) {
+	artifactsURL := fmt.Sprintf("https://api.github.com/repos/%s/actions/runs/%d/artifacts", repo, runID)
+	req, _ := http.NewRequest(http.MethodGet, artifactsURL, nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[Job %s] Failed to fetch artifacts list: %v", jobID, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	var artList struct {
+		Artifacts []struct {
+			ID                  int64  `json:"id"`
+			Name                string `json:"name"`
+			ArchiveDownloadURL string `json:"archive_download_url"`
+		} `json:"artifacts"`
+	}
+	json.NewDecoder(resp.Body).Decode(&artList)
+
+	var downloadURL string
+	for _, a := range artList.Artifacts {
+		if a.Name == "generated-shorts-video" {
+			downloadURL = a.ArchiveDownloadURL
+			break
+		}
+	}
+
+	if downloadURL == "" && len(artList.Artifacts) > 0 {
+		downloadURL = artList.Artifacts[0].ArchiveDownloadURL
+	}
+
+	if downloadURL == "" {
+		log.Printf("[Job %s] No artifact found in run %d", jobID, runID)
+		return
+	}
+
+	// Download zip
+	dlReq, _ := http.NewRequest(http.MethodGet, downloadURL, nil)
+	dlReq.Header.Set("Authorization", "Bearer "+token)
+
+	// Note: follow redirects
+	dlClient := &http.Client{Timeout: 180 * time.Second}
+	dlResp, err := dlClient.Do(dlReq)
+	if err != nil || dlResp.StatusCode != http.StatusOK {
+		log.Printf("[Job %s] Failed to download artifact zip: %v", jobID, err)
+		return
+	}
+	defer dlResp.Body.Close()
+
+	zipBytes, err := io.ReadAll(dlResp.Body)
+	if err != nil {
+		log.Printf("[Job %s] Failed to read zip bytes: %v", jobID, err)
+		return
+	}
+
+	zipReader, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+	if err != nil {
+		log.Printf("[Job %s] Failed to parse artifact zip: %v", jobID, err)
+		return
+	}
+
+	targetDir := filepath.Join(s.cfg.ProjectDir, "output", jobID)
+	os.MkdirAll(targetDir, 0755)
+	outputDir = targetDir
+
+	for _, file := range zipReader.File {
+		base := filepath.Base(file.Name)
+		destFile := filepath.Join(targetDir, base)
+
+		rc, err := file.Open()
+		if err != nil {
+			continue
+		}
+		outFile, err := os.Create(destFile)
+		if err == nil {
+			io.Copy(outFile, rc)
+			outFile.Close()
+		}
+		rc.Close()
+
+		if base == "video.mp4" {
+			videoPath = destFile
+		}
+		if base == "caption.txt" {
+			if capBytes, err := os.ReadFile(destFile); err == nil {
+				caption = string(capBytes)
+			}
+		}
+	}
+
+	return
+}
+
 func (s *Server) failJob(job *Job, errMsg string) {
 	s.updateJob(job.ID, func(j *Job) {
 		j.Status = "failed"
@@ -486,13 +833,17 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var req struct {
-			LLMBaseURL    string `json:"llm_base_url"`
-			LLMAPIKey     string `json:"llm_api_key"`
-			LLMModel      string `json:"llm_model"`
-			ChannelName   string `json:"channel_name"`
-			TiktokHandle  string `json:"tiktok_handle"`
-			TTSProvider   string `json:"tts_provider"`
-			TelegramToken string `json:"telegram_token"`
+			LLMBaseURL     string `json:"llm_base_url"`
+			LLMAPIKey      string `json:"llm_api_key"`
+			LLMModel       string `json:"llm_model"`
+			ChannelName    string `json:"channel_name"`
+			TiktokHandle   string `json:"tiktok_handle"`
+			TTSProvider    string `json:"tts_provider"`
+			TelegramToken  string `json:"telegram_token"`
+			RenderEngine   string `json:"render_engine"`
+			GitHubRepo     string `json:"github_repo"`
+			GitHubToken    string `json:"github_token"`
+			GitHubWorkflow string `json:"github_workflow"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -524,6 +875,22 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		if req.TTSProvider != "" {
 			s.cfg.TTSProvider = req.TTSProvider
 			os.Setenv("TTS_PROVIDER", req.TTSProvider)
+		}
+		if req.RenderEngine != "" {
+			s.cfg.RenderEngine = req.RenderEngine
+			os.Setenv("RENDER_ENGINE", req.RenderEngine)
+		}
+		if req.GitHubRepo != "" {
+			s.cfg.GitHubRepo = req.GitHubRepo
+			os.Setenv("GITHUB_REPO", req.GitHubRepo)
+		}
+		if req.GitHubToken != "" {
+			s.cfg.GitHubToken = req.GitHubToken
+			os.Setenv("GITHUB_TOKEN", req.GitHubToken)
+		}
+		if req.GitHubWorkflow != "" {
+			s.cfg.GitHubWorkflow = req.GitHubWorkflow
+			os.Setenv("GITHUB_WORKFLOW", req.GitHubWorkflow)
 		}
 		if req.TelegramToken != "" && s.cfg.TelegramToken != req.TelegramToken {
 			s.cfg.TelegramToken = req.TelegramToken
@@ -558,6 +925,10 @@ func (s *Server) saveConfigToEnv() {
 		"TIKTOK_HANDLE":      s.cfg.TiktokHandle,
 		"TTS_PROVIDER":       s.cfg.TTSProvider,
 		"TELEGRAM_BOT_TOKEN": s.cfg.TelegramToken,
+		"RENDER_ENGINE":      s.cfg.RenderEngine,
+		"GITHUB_REPO":        s.cfg.GitHubRepo,
+		"GITHUB_TOKEN":       s.cfg.GitHubToken,
+		"GITHUB_WORKFLOW":    s.cfg.GitHubWorkflow,
 	}
 
 	var newLines []string
@@ -608,10 +979,21 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 			Theme   string `json:"theme,omitempty"`
 			Voice   string `json:"voice,omitempty"`
 			Channel string `json:"channel,omitempty"`
+			Engine  string `json:"engine,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.URL == "" {
 			http.Error(w, `{"error":"missing url"}`, http.StatusBadRequest)
 			return
+		}
+
+		engine := req.Engine
+		if engine == "" || engine == "auto" {
+			s.cfgMu.RLock()
+			engine = s.cfg.RenderEngine
+			s.cfgMu.RUnlock()
+		}
+		if engine == "" {
+			engine = "local"
 		}
 
 		jobID := fmt.Sprintf("%d", time.Now().UnixMilli())
@@ -621,6 +1003,7 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 			Theme:     req.Theme,
 			Voice:     req.Voice,
 			Channel:   req.Channel,
+			Engine:    engine,
 			Status:    "queued",
 			Progress:  "Đang chờ xếp hàng...",
 			CreatedAt: time.Now(),

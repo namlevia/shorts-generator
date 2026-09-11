@@ -513,6 +513,15 @@
                 <option value="vi-VN-DaLyNeural" data-i18n="studio.voiceDaLy">Nữ miền Nam (Đà Lý - Dịu dàng, tự nhiên)</option>
               </select>
             </div>
+
+            <div class="form-group">
+              <label for="select-engine" data-i18n="studio.engineLabel">Chế Độ Render</label>
+              <select id="select-engine">
+                <option value="auto" data-i18n="studio.engineAuto">⚙️ Mặc định (Theo Cài Đặt)</option>
+                <option value="local" data-i18n="studio.engineLocal">🖥️ Local (Render trực tiếp)</option>
+                <option value="github" data-i18n="studio.engineGitHub">☁️ Cloud (GitHub Actions)</option>
+              </select>
+            </div>
           </div>
 
           <button type="submit" class="btn-submit" id="btn-submit">
@@ -607,6 +616,29 @@
             </div>
           </div>
 
+          <h3 style="font-size: 16px; margin: 24px 0 16px; color: var(--accent-cyan);" data-i18n="settings.secEngine">☁️ 4. Chế Độ Render (Local / GitHub Actions)</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label data-i18n="settings.renderEngine">Chế Độ Render Mặc Định</label>
+              <select id="cfg-render-engine">
+                <option value="local" data-i18n="settings.engineLocal">🖥️ Local (Render trực tiếp trên máy)</option>
+                <option value="github" data-i18n="settings.engineGitHub">☁️ GitHub Actions (Cloud Runner - Cực nhẹ cho Pi 5)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.githubRepo">GitHub Repository (owner/repo)</label>
+              <input type="text" id="cfg-github-repo" placeholder="namlevia/shorts-generator">
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.githubToken">GitHub Token (PAT có quyền repo/actions)</label>
+              <input type="password" id="cfg-github-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+            </div>
+            <div class="form-group">
+              <label data-i18n="settings.githubWorkflow">File Workflow (Mặc định: render.yml)</label>
+              <input type="text" id="cfg-github-workflow" placeholder="render.yml">
+            </div>
+          </div>
+
           <button type="submit" class="btn-submit" style="margin-top: 12px; background: linear-gradient(135deg, #10b981, #059669);">
             <span data-i18n="settings.btnSave">💾 Lưu Cấu Hình Hệ Thống</span>
           </button>
@@ -661,6 +693,10 @@
         "studio.voiceNamMinh": "Nam miền Bắc (Nam Minh - Truyền cảm, chuẩn tin tức)",
         "studio.voiceHoaiMy": "Nữ miền Bắc (Hoài My - Trẻ trung, năng động)",
         "studio.voiceDaLy": "Nữ miền Nam (Đà Lý - Dịu dàng, tự nhiên)",
+        "studio.engineLabel": "Chế Độ Render",
+        "studio.engineAuto": "⚙️ Mặc định (Theo Cài Đặt)",
+        "studio.engineLocal": "🖥️ Local (Render trực tiếp)",
+        "studio.engineGitHub": "☁️ Cloud (GitHub Actions)",
         "studio.btnSubmit": "⚡ Bắt Đầu Tạo Video Ngay",
         "studio.btnSubmitting": "⏳ Đang đưa vào hàng đợi...",
         
@@ -697,6 +733,13 @@
         "settings.ttsEdge": "Edge-TTS (Miễn phí 100%, chất lượng cao)",
         "settings.secTelegram": "💬 3. Cấu Hình Telegram Bot (Điều khiển từ xa)",
         "settings.telegramToken": "Telegram Bot Token (lấy từ @BotFather)",
+        "settings.secEngine": "☁️ 4. Chế Độ Render (Local / GitHub Actions)",
+        "settings.renderEngine": "Chế Độ Render Mặc Định",
+        "settings.engineLocal": "🖥️ Local (Render trực tiếp trên máy)",
+        "settings.engineGitHub": "☁️ GitHub Actions (Cloud Runner - Cực nhẹ cho Pi 5)",
+        "settings.githubRepo": "GitHub Repository (owner/repo)",
+        "settings.githubToken": "GitHub Token (PAT có quyền repo/actions)",
+        "settings.githubWorkflow": "File Workflow (Mặc định: render.yml)",
         "settings.btnSave": "💾 Lưu Cấu Hình Hệ Thống",
         
         // Modal
@@ -734,6 +777,10 @@
         "studio.voiceNamMinh": "Male Northern VN (Nam Minh - Expressive, News anchor)",
         "studio.voiceHoaiMy": "Female Northern VN (Hoài My - Young, Dynamic)",
         "studio.voiceDaLy": "Female Southern VN (Đà Lý - Gentle, Natural)",
+        "studio.engineLabel": "Render Engine",
+        "studio.engineAuto": "⚙️ Default (Follow Settings)",
+        "studio.engineLocal": "🖥️ Local (Direct render)",
+        "studio.engineGitHub": "☁️ Cloud (GitHub Actions)",
         "studio.btnSubmit": "⚡ Start Generating Video",
         "studio.btnSubmitting": "⏳ Queueing generation...",
         
@@ -770,6 +817,13 @@
         "settings.ttsEdge": "Edge-TTS (100% Free, High Quality)",
         "settings.secTelegram": "💬 3. Telegram Bot (Remote Control)",
         "settings.telegramToken": "Telegram Bot Token (from @BotFather)",
+        "settings.secEngine": "☁️ 4. Render Engine (Local / GitHub Actions)",
+        "settings.renderEngine": "Default Render Engine",
+        "settings.engineLocal": "🖥️ Local (Render directly on machine)",
+        "settings.engineGitHub": "☁️ GitHub Actions (Cloud Runner - Ultra-light on Pi 5)",
+        "settings.githubRepo": "GitHub Repository (owner/repo)",
+        "settings.githubToken": "GitHub Token (PAT with repo/actions scope)",
+        "settings.githubWorkflow": "Workflow File (Default: render.yml)",
         "settings.btnSave": "💾 Save System Settings",
         
         // Modal
@@ -841,6 +895,7 @@
       const url = document.getElementById('input-url').value.trim();
       const theme = document.getElementById('select-theme').value;
       const voice = document.getElementById('select-voice').value;
+      const engine = document.getElementById('select-engine').value;
       const btn = document.getElementById('btn-submit');
 
       btn.disabled = true;
@@ -850,7 +905,7 @@
         const res = await fetch('/api/jobs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, theme, voice })
+          body: JSON.stringify({ url, theme, voice, engine })
         });
         const data = await res.json();
         showToast(t('toast.queueSuccess'));
@@ -892,6 +947,13 @@
         else if (j.status === 'completed') badge = `<span class="status-badge badge-completed">✓ ${t('queue.statusCompleted')}</span>`;
         else badge = `<span class="status-badge badge-failed">✕ ${t('queue.statusFailed')}</span>`;
 
+        let engineBadge = '';
+        if (j.engine === 'github') {
+          engineBadge = `<span style="font-size:11px; padding:2px 8px; border-radius:12px; background:rgba(124,58,237,0.2); color:#c084fc; border:1px solid rgba(124,58,237,0.35); margin-left:6px;">☁️ Cloud</span>`;
+        } else {
+          engineBadge = `<span style="font-size:11px; padding:2px 8px; border-radius:12px; background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); margin-left:6px;">🖥️ Local</span>`;
+        }
+
         const shortUrl = j.url.replace(/^https?:\/\/(www\.)?github\.com\//, '').slice(0, 35);
         const locale = currentLang === 'vi' ? 'vi-VN' : 'en-US';
         const timeStr = new Date(j.created_at).toLocaleTimeString(locale);
@@ -907,7 +969,7 @@
           <tr>
             <td><code style="color:var(--accent-cyan);">${j.id.slice(-6)}</code></td>
             <td><a href="${j.url}" target="_blank" style="color:#fff; text-decoration:none;">${shortUrl}</a></td>
-            <td>${badge}</td>
+            <td>${badge} ${engineBadge}</td>
             <td style="color:var(--text-muted); font-size:13px;">${j.progress || j.error || '...'}</td>
             <td style="color:var(--text-muted); font-size:13px;">${timeStr}</td>
             <td>${actionBtn}</td>
@@ -958,6 +1020,10 @@
         document.getElementById('cfg-tiktok-handle').value = cfg.tiktok_handle || '@leviatech';
         document.getElementById('cfg-tts-provider').value = cfg.tts_provider || 'edge-tts';
         document.getElementById('cfg-telegram-token').value = cfg.telegram_token || '';
+        document.getElementById('cfg-render-engine').value = cfg.render_engine || 'local';
+        document.getElementById('cfg-github-repo').value = cfg.github_repo || 'namlevia/shorts-generator';
+        document.getElementById('cfg-github-token').value = cfg.github_token || '';
+        document.getElementById('cfg-github-workflow').value = cfg.github_workflow || 'render.yml';
       } catch (err) {
         console.error('Fetch config failed:', err);
       }
@@ -973,6 +1039,10 @@
         tiktok_handle: document.getElementById('cfg-tiktok-handle').value.trim(),
         tts_provider: document.getElementById('cfg-tts-provider').value,
         telegram_token: document.getElementById('cfg-telegram-token').value.trim(),
+        render_engine: document.getElementById('cfg-render-engine').value,
+        github_repo: document.getElementById('cfg-github-repo').value.trim(),
+        github_token: document.getElementById('cfg-github-token').value.trim(),
+        github_workflow: document.getElementById('cfg-github-workflow').value.trim(),
       };
 
       try {
