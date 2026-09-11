@@ -135,6 +135,22 @@ function renderScene(
       inner = renderHookInner(td, bgImageRelPath);
       layoutName = "hook";
       break;
+    case "glitch-title":
+      inner = renderGlitchTitleInner(td);
+      layoutName = "glitch-title";
+      break;
+    case "liquid-hero":
+      inner = renderLiquidHeroInner(td);
+      layoutName = "liquid-hero";
+      break;
+    case "bold-poster":
+      inner = renderBoldPosterInner(td);
+      layoutName = "bold-poster";
+      break;
+    case "pentagram-stat":
+      inner = renderPentagramStatInner(td);
+      layoutName = "pentagram-stat";
+      break;
     case "comparison":
       inner = renderComparisonInner(td);
       layoutName = "comparison";
@@ -272,6 +288,112 @@ function renderOutroInner(
   <div class="out-source">Nguồn: ${escapeHtml(td.source)}</div>
 </div>
 ${ttCard}`.trim();
+}
+
+// ── GLITCH TITLE SCENE ─────────────────────────────────────────────────────
+function renderGlitchTitleInner(td: Extract<TemplateDataType, { template: "glitch-title" }>): string {
+  const headline = escapeHtml(td.headline);
+  const subtitle = td.subtitle ? escapeHtml(td.subtitle) : "";
+  const tag = escapeHtml(td.tag || "SIGNAL · INTEL");
+
+  return `
+<div class="layout-glitch-title">
+  <div class="cyber-scanlines"></div>
+  <div class="cyber-grid"></div>
+  <div class="cyber-vignette"></div>
+
+  <div class="cyber-hud tl">&gt;&gt; ${tag}</div>
+  <div class="cyber-hud tr">REC ●</div>
+  <div class="cyber-hud bl">SYSTEM: ACTIVE</div>
+  <div class="cyber-hud br">CH-04 // LIVE</div>
+
+  <pre class="cyber-ascii a1">█▓▒░ █▓▒░\n▒▓█▓ ░▒▓</pre>
+  <pre class="cyber-ascii a2">█▓▒░ ▓▒░█\n▒░░▓ ░▒▓█</pre>
+
+  <div class="glitch-center-wrap">
+    <div class="glitch-overline">— TRANSMISSION —</div>
+    <div class="glitch-host">
+      <div class="glitch-text base">${headline}</div>
+      <div class="glitch-text layer layer-c">${headline}</div>
+      <div class="glitch-text layer layer-m">${headline}</div>
+    </div>
+    ${subtitle ? `<div class="glitch-subtitle">${subtitle}</div>` : ""}
+  </div>
+</div>`.trim();
+}
+
+// ── LIQUID HERO SCENE ──────────────────────────────────────────────────────
+function renderLiquidHeroInner(td: Extract<TemplateDataType, { template: "liquid-hero" }>): string {
+  const headline = escapeHtml(td.headline);
+  const subhead = td.subhead ? escapeHtml(td.subhead) : "";
+  const cta = escapeHtml(td.cta || "Khám phá ngay");
+  const kicker = escapeHtml(td.kicker || "LeviaTech");
+
+  return `
+<div class="layout-liquid-hero">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+
+  <div class="liquid-content">
+    <div class="liquid-kicker">${kicker}</div>
+    <div class="liquid-headline shimmer-sweep-target">${headline}</div>
+    ${subhead ? `<div class="liquid-subhead">${subhead}</div>` : ""}
+    <div class="liquid-cta-pill">
+      <span class="pill-dot"></span>
+      <span>${cta}</span>
+    </div>
+  </div>
+</div>`.trim();
+}
+
+// ── BOLD POSTER SCENE ──────────────────────────────────────────────────────
+function renderBoldPosterInner(td: Extract<TemplateDataType, { template: "bold-poster" }>): string {
+  const figure = escapeHtml(td.figure);
+  const headline = escapeHtml(td.headline);
+  const standfirst = td.standfirst ? escapeHtml(td.standfirst) : "";
+  const kicker = escapeHtml(td.kicker || "SPECIAL REPORT");
+
+  return `
+<div class="layout-bold-poster">
+  <div class="bubble bb1"></div>
+  <div class="bubble bb2"></div>
+
+  <div class="poster-kicker">
+    <span class="poster-kicker-label">${kicker}</span>
+    <span class="poster-kicker-rule"></span>
+    <span class="poster-kicker-meta">TECH INSIGHTS</span>
+  </div>
+
+  <div class="poster-figure">${figure}</div>
+
+  <div class="poster-headline-wrap">
+    <div class="poster-headline shimmer-sweep-target">${headline}</div>
+  </div>
+
+  ${standfirst ? `<div class="poster-standfirst">${standfirst}</div>` : ""}
+</div>`.trim();
+}
+
+// ── PENTAGRAM STAT SCENE ───────────────────────────────────────────────────
+function renderPentagramStatInner(td: Extract<TemplateDataType, { template: "pentagram-stat" }>): string {
+  const value = escapeHtml(td.value);
+  const label = escapeHtml(td.label);
+  const subtitle = td.subtitle ? escapeHtml(td.subtitle) : "";
+  const anchor = escapeHtml(td.anchor || value.replace(/[^0-9]/g, "").slice(0, 3) || "01");
+
+  return `
+<div class="layout-pentagram-stat">
+  <div class="penta-rule-h"></div>
+  <div class="penta-rule-v"></div>
+  <div class="penta-type-anchor">${anchor}</div>
+
+  <div class="penta-content">
+    <div class="penta-eyebrow">${label}</div>
+    <div class="penta-value shimmer-sweep-target">${value}</div>
+    ${subtitle ? `<div class="penta-subtitle">${subtitle}</div>` : ""}
+  </div>
+</div>`.trim();
 }
 
 /**

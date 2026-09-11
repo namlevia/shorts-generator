@@ -34,6 +34,14 @@ window.__timelines["news-video"] = tl;
 
     if (layout === "hook") {
       animateHook(scene, tl, start);
+    } else if (layout === "glitch-title") {
+      animateGlitchTitle(scene, tl, start);
+    } else if (layout === "liquid-hero") {
+      animateLiquidHero(scene, tl, start);
+    } else if (layout === "bold-poster") {
+      animateBoldPoster(scene, tl, start);
+    } else if (layout === "pentagram-stat") {
+      animatePentagramStat(scene, tl, start);
     } else if (layout === "comparison") {
       animateComparison(scene, tl, start);
     } else if (layout === "stat-hero") {
@@ -63,6 +71,90 @@ window.__timelines["news-video"] = tl;
     const subhead = scene.querySelector(".hook-subhead");
     if (subhead) {
       tl.fromTo(subhead, { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, start + 0.55);
+    }
+  }
+
+  // ── GLITCH TITLE ──────────────────────────────────────────────────────
+  function animateGlitchTitle(scene, tl, start) {
+    const wrap = scene.querySelector(".glitch-center-wrap");
+    if (wrap) {
+      tl.fromTo(wrap, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5 }, start + 0.1);
+    }
+    const overline = scene.querySelector(".glitch-overline");
+    if (overline) {
+      tl.fromTo(overline, { y: -30, opacity: 0 }, { y: 0, opacity: 0.7, duration: 0.4 }, start + 0.15);
+    }
+    const sub = scene.querySelector(".glitch-subtitle");
+    if (sub) {
+      tl.fromTo(sub, { y: 40, opacity: 0 }, { y: 0, opacity: 0.85, duration: 0.5 }, start + 0.4);
+    }
+  }
+
+  // ── LIQUID HERO ───────────────────────────────────────────────────────
+  function animateLiquidHero(scene, tl, start) {
+    const headline = scene.querySelector(".liquid-headline");
+    if (headline) {
+      tl.fromTo(headline, { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6 }, start + 0.15);
+      const mask = headline.querySelector(".shimmer-mask");
+      if (mask) {
+        tl.fromTo(mask, { x: "-120%" }, { x: "120%", duration: 1.0 }, start + 0.7);
+      }
+    }
+    const kicker = scene.querySelector(".liquid-kicker");
+    if (kicker) {
+      tl.fromTo(kicker, { y: -30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, start + 0.1);
+    }
+    const subhead = scene.querySelector(".liquid-subhead");
+    if (subhead) {
+      tl.fromTo(subhead, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, start + 0.45);
+    }
+    const pill = scene.querySelector(".liquid-cta-pill");
+    if (pill) {
+      tl.fromTo(pill, { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4 }, start + 0.65);
+    }
+  }
+
+  // ── BOLD POSTER ───────────────────────────────────────────────────────
+  function animateBoldPoster(scene, tl, start) {
+    const fig = scene.querySelector(".poster-figure");
+    if (fig) {
+      tl.fromTo(fig, { y: -80, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 }, start + 0.1);
+    }
+    const head = scene.querySelector(".poster-headline");
+    if (head) {
+      tl.fromTo(head, { x: -60, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6 }, start + 0.3);
+      const mask = head.querySelector(".shimmer-mask");
+      if (mask) {
+        tl.fromTo(mask, { x: "-120%" }, { x: "120%", duration: 1.0 }, start + 0.8);
+      }
+    }
+    const stand = scene.querySelector(".poster-standfirst");
+    if (stand) {
+      tl.fromTo(stand, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, start + 0.55);
+    }
+  }
+
+  // ── PENTAGRAM STAT ────────────────────────────────────────────────────
+  function animatePentagramStat(scene, tl, start) {
+    const anchor = scene.querySelector(".penta-type-anchor");
+    if (anchor) {
+      tl.fromTo(anchor, { x: 60, opacity: 0 }, { x: 0, opacity: 0.08, duration: 0.8 }, start + 0.1);
+    }
+    const val = scene.querySelector(".penta-value");
+    if (val) {
+      tl.fromTo(val, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6 }, start + 0.2);
+      const mask = val.querySelector(".shimmer-mask");
+      if (mask) {
+        tl.fromTo(mask, { x: "-120%" }, { x: "120%", duration: 1.0 }, start + 0.7);
+      }
+    }
+    const eyebrow = scene.querySelector(".penta-eyebrow");
+    if (eyebrow) {
+      tl.fromTo(eyebrow, { y: -30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, start + 0.15);
+    }
+    const sub = scene.querySelector(".penta-subtitle");
+    if (sub) {
+      tl.fromTo(sub, { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, start + 0.5);
     }
   }
 

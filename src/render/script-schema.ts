@@ -51,6 +51,37 @@ const OutroData = z.object({
   source: z.string().min(1).max(80),
 });
 
+const GlitchTitleData = z.object({
+  template: z.literal("glitch-title"),
+  headline: z.string().min(1).max(50),
+  subtitle: z.string().max(80).optional(),
+  tag: z.string().max(30).optional(),
+});
+
+const LiquidHeroData = z.object({
+  template: z.literal("liquid-hero"),
+  headline: z.string().min(1).max(60),
+  subhead: z.string().max(80).optional(),
+  cta: z.string().max(30).optional(),
+  kicker: z.string().max(30).optional(),
+});
+
+const BoldPosterData = z.object({
+  template: z.literal("bold-poster"),
+  figure: z.string().min(1).max(10),
+  headline: z.string().min(1).max(60),
+  standfirst: z.string().max(140).optional(),
+  kicker: z.string().max(30).optional(),
+});
+
+const PentagramStatData = z.object({
+  template: z.literal("pentagram-stat"),
+  value: z.string().min(1).max(20),
+  label: z.string().min(1).max(50),
+  subtitle: z.string().max(120).optional(),
+  anchor: z.string().max(10).optional(),
+});
+
 export const TemplateData = z.discriminatedUnion("template", [
   HookData,
   ComparisonData,
@@ -58,6 +89,10 @@ export const TemplateData = z.discriminatedUnion("template", [
   FeatureListData,
   CalloutData,
   OutroData,
+  GlitchTitleData,
+  LiquidHeroData,
+  BoldPosterData,
+  PentagramStatData,
 ]);
 
 export type TemplateDataType = z.infer<typeof TemplateData>;

@@ -91,11 +91,15 @@ Trả về duy nhất 1 JSON object (không thêm văn bản ngoài lề, bọc 
 
 CÁC TEMPLATE ĐƯỢC PHÉP DÙNG TRONG templateData:
 1. hook: headline (max 40), subhead (max 40), bgSrc: "$source.image", kenBurns: "zoom-in" | "zoom-out" | "pan-left" | "pan-right"
-2. comparison: left { label (max 30), value (max 20), color: "cyan" }, right { label (max 30), value (max 20), color: "purple", winner: true }
-3. stat-hero: value (max 20), label (max 40), context (max 50)
-4. feature-list: title (max 40), bullets (mảng 1-4 chuỗi, mỗi chuỗi TỐI ĐA 50 ký tự)
-5. callout: statement (tối đa 80 ký tự), tag (tối đa 20 ký tự)
-6. outro: ctaTop (max 30), channelName (max 30), source (max 40)
+2. glitch-title: headline (max 50, ngắn gọn in hoa cyberpunk), subtitle (max 80), tag (max 30, ví dụ "SIGNAL · TECH" hoặc "BREAKING")
+3. liquid-hero: headline (max 50, gradient phát sáng), subhead (max 80), cta (max 30), kicker (max 30)
+4. bold-poster: figure (max 10, ví dụ "01", "24/7", "AI"), headline (max 60), standfirst (max 120), kicker (max 30)
+5. pentagram-stat: value (max 20, ví dụ "82%", "10x", "0 ĐỒNG"), label (max 50, nhãn số liệu), subtitle (max 120), anchor (max 10, số mờ in chìm)
+6. comparison: left { label (max 30), value (max 20), color: "cyan" }, right { label (max 30), value (max 20), color: "purple", winner: true }
+7. stat-hero: value (max 20), label (max 40), context (max 50)
+8. feature-list: title (max 40), bullets (mảng 1-4 chuỗi, mỗi chuỗi TỐI ĐA 50 ký tự)
+9. callout: statement (tối đa 80 ký tự), tag (tối đa 20 ký tự)
+10. outro: ctaTop (max 30), channelName (max 30), source (max 40)
 
 ⚠️ QUY TẮC BẮT BUỘC VỀ LỜI THOẠI (voiceText - Phát âm AI TTS):
 - voiceText sẽ được AI Voice đọc thành tiếng. AI đọc máy móc từng ký tự nếu viết số hay từ viết tắt!
@@ -237,6 +241,33 @@ function normalizeParsedJson(parsed: any, content: ScrapedContent, cfg: Config):
         td.source = String(
           td.source && td.source !== "github.com" ? td.source : (content.displaySource || content.domain)
         ).slice(0, 80);
+        break;
+
+      case "glitch-title":
+        td.headline = String(td.headline || content.title).slice(0, 50);
+        if (td.subtitle) td.subtitle = String(td.subtitle).slice(0, 80);
+        td.tag = String(td.tag || "SIGNAL · TECH").slice(0, 30);
+        break;
+
+      case "liquid-hero":
+        td.headline = String(td.headline || content.title).slice(0, 60);
+        if (td.subhead) td.subhead = String(td.subhead).slice(0, 80);
+        td.cta = String(td.cta || "Khám phá ngay").slice(0, 30);
+        td.kicker = String(td.kicker || channelName).slice(0, 30);
+        break;
+
+      case "bold-poster":
+        td.figure = String(td.figure || "01").slice(0, 10);
+        td.headline = String(td.headline || content.title).slice(0, 60);
+        if (td.standfirst) td.standfirst = String(td.standfirst).slice(0, 140);
+        td.kicker = String(td.kicker || "SPECIAL REPORT").slice(0, 30);
+        break;
+
+      case "pentagram-stat":
+        td.value = String(td.value || "100%").slice(0, 20);
+        td.label = String(td.label || "Số liệu nổi bật").slice(0, 50);
+        if (td.subtitle) td.subtitle = String(td.subtitle).slice(0, 120);
+        td.anchor = String(td.anchor || td.value.replace(/[^0-9]/g, "").slice(0, 3) || "01").slice(0, 10);
         break;
 
       default:
