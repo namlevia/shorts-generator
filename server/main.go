@@ -819,8 +819,8 @@ func (s *Server) downloadGitHubArtifact(repo string, runID int64, token string, 
 	dlReq, _ := http.NewRequest(http.MethodGet, downloadURL, nil)
 	dlReq.Header.Set("Authorization", "Bearer "+token)
 
-	// Note: follow redirects
-	dlClient := &http.Client{Timeout: 180 * time.Second}
+	// Download zip with streaming to temp file (low RAM for Pi 5, 10 min timeout)
+	dlClient := &http.Client{Timeout: 600 * time.Second}
 	dlResp, err := dlClient.Do(dlReq)
 	if err != nil || dlResp.StatusCode != http.StatusOK {
 		log.Printf("[Job %s] Failed to download artifact zip: %v", jobID, err)
@@ -828,17 +828,28 @@ func (s *Server) downloadGitHubArtifact(repo string, runID int64, token string, 
 	}
 	defer dlResp.Body.Close()
 
-	zipBytes, err := io.ReadAll(dlResp.Body)
+	tmpZip, err := os.CreateTemp("", "gh-art-*.zip")
 	if err != nil {
-		log.Printf("[Job %s] Failed to read zip bytes: %v", jobID, err)
+		log.Printf("[Job %s] Failed to create temp zip file: %v", jobID, err)
 		return
 	}
+	tmpZipPath := tmpZip.Name()
+	defer os.Remove(tmpZipPath)
 
-	zipReader, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
+	written, err := io.Copy(tmpZip, dlResp.Body)
+	tmpZip.Close()
+	if err != nil {
+		log.Printf("[Job %s] Failed to stream artifact zip to file: %v", jobID, err)
+		return
+	}
+	log.Printf("[Job %s] Downloaded artifact zip: %d bytes (%.2f MB)", jobID, written, float64(written)/(1024*1024))
+
+	zipReader, err := zip.OpenReader(tmpZipPath)
 	if err != nil {
 		log.Printf("[Job %s] Failed to parse artifact zip: %v", jobID, err)
 		return
 	}
+	defer zipReader.Close()
 
 	targetDir := filepath.Join(s.cfg.ProjectDir, "output", jobID)
 	os.MkdirAll(targetDir, 0755)
