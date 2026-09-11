@@ -147,6 +147,21 @@ function normalizeParsedJson(parsed: any, content: ScrapedContent, cfg: Config):
     ];
   }
 
+  // Ensure scenes count is at least 5
+  while (parsed.scenes.length < 5) {
+    const insertIdx = Math.max(1, parsed.scenes.length - 1);
+    parsed.scenes.splice(insertIdx, 0, {
+      id: `body-${parsed.scenes.length}`,
+      type: "body",
+      voiceText: "Điểm đáng chú ý là sự tối ưu và tốc độ thực thi vượt trội.",
+      templateData: {
+        template: "callout",
+        statement: "Hiệu năng tối ưu và dễ dàng mở rộng",
+        tag: "Điểm nổi bật",
+      },
+    });
+  }
+
   const lastIdx = parsed.scenes.length - 1;
   parsed.scenes.forEach((scene: any, idx: number) => {
     // 1. Ensure id
@@ -351,6 +366,12 @@ Target JSON Schema:
       "type": "body",
       "voiceText": "Giới thiệu các tính năng cốt lõi.",
       "templateData": { "template": "feature-list", "title": "Tính năng chính", "bullets": ["Tự động hóa", "Nhanh chóng", "Mã nguồn mở"] }
+    },
+    {
+      "id": "body-3",
+      "type": "body",
+      "voiceText": "Hiệu quả vượt trội so với các giải pháp trước đây.",
+      "templateData": { "template": "stat-hero", "value": "100%", "label": "Tự động hóa", "context": "Tiết kiệm thời gian" }
     },
     {
       "id": "outro",
