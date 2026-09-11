@@ -80,6 +80,16 @@ jobs:
             npx tsx src/make.ts "$TARGET_URL"
           fi
 
+          # Tối ưu hóa dung lượng video cho TikTok & download nhanh về Pi (150MB -> ~15-20MB)
+          FINAL_VIDEO=$(find output -name "video.mp4" | head -n 1)
+          if [ -f "$FINAL_VIDEO" ]; then
+            echo "⚡ Đang nén tối ưu video (CRF 26, faststart)..."
+            ffmpeg -y -i "$FINAL_VIDEO" -vcodec libx264 -crf 26 -preset fast -pix_fmt yuv420p -movflags +faststart "$FINAL_VIDEO.opt.mp4"
+            mv "$FINAL_VIDEO.opt.mp4" "$FINAL_VIDEO"
+            echo "Dung lượng video sau tối ưu:"
+            ls -lh "$FINAL_VIDEO"
+          fi
+
       - name: Upload Output Video Artifact
         uses: actions/upload-artifact@v4
         if: always()
