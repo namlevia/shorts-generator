@@ -19,6 +19,18 @@ on:
         description: 'Edge-TTS Voice ID'
         required: false
         default: 'vi-VN-NamMinhNeural'
+      llm_api_key:
+        description: 'LLM API Key (optional override)'
+        required: false
+        default: ''
+      llm_base_url:
+        description: 'LLM Base URL (optional override)'
+        required: false
+        default: ''
+      llm_model:
+        description: 'LLM Model (optional override)'
+        required: false
+        default: ''
   repository_dispatch:
     types: [generate-video]
 
@@ -48,9 +60,9 @@ jobs:
 
       - name: Generate Video
         env:
-          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || vars.LLM_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/' }}
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY || secrets.GEMINI_API_KEY }}
-          LLM_MODEL: ${{ vars.LLM_MODEL || 'gemini-2.0-flash' }}
+          LLM_BASE_URL: ${{ inputs.llm_base_url || secrets.LLM_BASE_URL || vars.LLM_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/' }}
+          LLM_API_KEY: ${{ inputs.llm_api_key || secrets.LLM_API_KEY || secrets.GEMINI_API_KEY }}
+          LLM_MODEL: ${{ inputs.llm_model || vars.LLM_MODEL || 'gemini-2.0-flash' }}
           TTS_PROVIDER: 'edge-tts'
           EDGE_TTS_VOICE: ${{ inputs.voice || 'vi-VN-NamMinhNeural' }}
           VIDEO_THEME: ${{ inputs.theme || 'dark-neon' }}

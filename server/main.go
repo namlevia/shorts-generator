@@ -520,13 +520,20 @@ func (s *Server) processGitHubJob(job *Job) {
 
 	// 1. Dispatch workflow
 	dispatchURL := fmt.Sprintf("https://api.github.com/repos/%s/actions/workflows/%s/dispatches", repo, workflow)
+	inputs := map[string]string{
+		"url":   job.URL,
+		"theme": theme,
+		"voice": voice,
+	}
+	if s.cfg.LLMBaseURL != "" && !strings.Contains(s.cfg.LLMBaseURL, "localhost") && !strings.Contains(s.cfg.LLMBaseURL, "127.0.0.1") {
+		inputs["llm_base_url"] = s.cfg.LLMBaseURL
+		inputs["llm_api_key"] = s.cfg.LLMAPIKey
+		inputs["llm_model"] = s.cfg.LLMModel
+	}
+
 	dispatchPayload := map[string]interface{}{
-		"ref": "main",
-		"inputs": map[string]string{
-			"url":   job.URL,
-			"theme": theme,
-			"voice": voice,
-		},
+		"ref":    "main",
+		"inputs": inputs,
 	}
 	bodyBytes, _ := json.Marshal(dispatchPayload)
 

@@ -469,9 +469,9 @@
 
       <div class="header-controls">
         <div class="nav-tabs">
-          <button class="nav-tab active" onclick="switchTab('studio')" data-i18n="nav.studio">🎬 Studio</button>
-          <button class="nav-tab" onclick="switchTab('queue')"><span data-i18n="nav.queue">📋 Hàng Đợi</span> <span id="queue-count">(0)</span></button>
-          <button class="nav-tab" onclick="switchTab('settings')" data-i18n="nav.settings">⚙️ Cài Đặt</button>
+          <button class="nav-tab active" data-tab="studio" onclick="switchTab('studio', this)" data-i18n="nav.studio">🎬 Studio</button>
+          <button class="nav-tab" data-tab="queue" onclick="switchTab('queue', this)"><span data-i18n="nav.queue">📋 Hàng Đợi</span> <span id="queue-count">(0)</span></button>
+          <button class="nav-tab" data-tab="settings" onclick="switchTab('settings', this)" data-i18n="nav.settings">⚙️ Cài Đặt</button>
         </div>
 
         <div class="lang-switcher">
@@ -881,11 +881,13 @@
       renderJobsTable(currentJobs);
     }
 
-    function switchTab(tabId) {
+    function switchTab(tabId, el) {
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      event.currentTarget.classList.add('active');
-      document.getElementById('tab-' + tabId).classList.add('active');
+      let btn = el || document.querySelector(`.nav-tab[data-tab="${tabId}"]`);
+      if (btn) btn.classList.add('active');
+      const target = document.getElementById('tab-' + tabId);
+      if (target) target.classList.add('active');
       if (tabId === 'queue') fetchJobs();
       if (tabId === 'settings') fetchConfig();
     }
