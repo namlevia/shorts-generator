@@ -1,0 +1,89 @@
+name: Render Shorts Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'GitHub repository or Article URL'
+        required: true
+        default: 'https://github.com/namlevia/AI-auto-generate-video'
+      theme:
+        description: 'Visual Theme (dark-neon / light-pro)'
+        required: false
+        default: 'dark-neon'
+        type: choice
+        options:
+          - dark-neon
+          - light-pro
+      voice:
+        description: 'Edge-TTS Voice ID'
+        required: false
+        default: 'vi-VN-NamMinhNeural'
+  repository_dispatch:
+    types: [generate-video]
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install System Dependencies (FFmpeg & Fonts)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-inter fonts-noto-cjk
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Generate Video
+        env:
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL || vars.LLM_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/openai/' }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY || secrets.GEMINI_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL || 'gemini-2.0-flash' }}
+          TTS_PROVIDER: 'edge-tts'
+          EDGE_TTS_VOICE: ${{ inputs.voice || 'vi-VN-NamMinhNeural' }}
+          VIDEO_THEME: ${{ inputs.theme || 'dark-neon' }}
+          CHANNEL_NAME: 'LeviaTech'
+          TIKTOK_HANDLE: '@leviatech'
+          TIKTOK_DISPLAY_NAME: 'LeviaTech'
+        run: |
+          TARGET_URL="${{ inputs.url || github.event.client_payload.url }}"
+          echo "🚀 Generating video for: $TARGET_URL"
+          npx tsx src/make.ts "$TARGET_URL"
+
+      - name: Upload Output Video Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: generated-shorts-video
+          path: |
+            output/**/video.mp4
+            output/**/caption.txt
+            output/**/script.json
+          retention-days: 7
+
+      - name: Send Video to Telegram (Optional)
+        if: env.TELEGRAM_BOT_TOKEN != '' && env.TELEGRAM_CHAT_ID != ''
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          VIDEO_FILE=$(find output -name "video.mp4" | head -n 1)
+          CAPTION_FILE=$(find output -name "caption.txt" | head -n 1)
+          CAPTION=$(cat "$CAPTION_FILE" 2>/dev/null || echo "Video hoàn thành!")
+          if [ -f "$VIDEO_FILE" ]; then
+            echo "Sending $VIDEO_FILE to Telegram chat $TELEGRAM_CHAT_ID..."
+            curl -F chat_id="$TELEGRAM_CHAT_ID" -F caption="$CAPTION" -F video=@"$VIDEO_FILE" \
+              "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendVideo"
+          fi
