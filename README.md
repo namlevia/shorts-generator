@@ -79,7 +79,7 @@ TIKTOK_DISPLAY_NAME=LeviaTech
 
 # 4. Telegram Bot (Tùy chọn: Dành cho Golang Server trên Pi 5)
 TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRstuVWXyz
-PORT=8080
+PORT=2024
 ```
 
 ---
@@ -106,10 +106,15 @@ go run main.go
 ```
 
 2. **Các tính năng server tự động kích hoạt:**
+* **Giao diện WebUI Studio (Đa ngôn ngữ VI / EN):**
+  * Mở trình duyệt truy cập: `http://localhost:2024`
+  * Dán link GitHub/báo chí, chọn theme (`dark-neon` / `light-pro`), chọn giọng đọc AI và bấm tạo video ngay trên web.
+  * Xem hàng đợi real-time, player xem video 9:16 trực tiếp, tải MP4 và 1-click copy caption.
+  * Cài đặt API LLM, TTS, Branding trực quan mà không cần chỉnh sửa file code.
 * **REST API:**
-  * `POST http://localhost:8080/api/jobs` kèm body `{"url": "https://github.com/..."}` để đưa vào hàng đợi.
-  * `GET http://localhost:8080/api/jobs/{id}` để theo dõi tiến độ.
-  * `GET http://localhost:8080/api/jobs/{id}/video` để tải video MP4.
+  * `POST http://localhost:2024/api/jobs` kèm body `{"url": "https://github.com/..."}` để đưa vào hàng đợi.
+  * `GET http://localhost:2024/api/jobs/{id}` để theo dõi tiến độ.
+  * `GET http://localhost:2024/api/jobs/{id}/video` để tải video MP4.
 * **Telegram Bot:**
   * Chỉ cần mở Telegram nhắn tin đường link GitHub cho Bot.
   * Bot sẽ tự xếp hàng, xử lý và gửi ngược lại video Full HD kèm Caption hoàn chỉnh!

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,19 +22,31 @@ import (
 	"time"
 )
 
+//go:embed web/*
+var webFS embed.FS
+
 // Config holds runtime configuration
 type Config struct {
-	Port              string
-	TelegramToken     string
-	TelegramAdminChat int64
-	ProjectDir        string
-	MaxConcurrent     int
+	Port              string `json:"port"`
+	TelegramToken     string `json:"telegram_token"`
+	TelegramAdminChat int64  `json:"telegram_admin_chat"`
+	ProjectDir        string `json:"project_dir"`
+	MaxConcurrent     int    `json:"max_concurrent"`
+	LLMBaseURL        string `json:"llm_base_url"`
+	LLMAPIKey         string `json:"llm_api_key"`
+	LLMModel          string `json:"llm_model"`
+	ChannelName       string `json:"channel_name"`
+	TiktokHandle      string `json:"tiktok_handle"`
+	TTSProvider       string `json:"tts_provider"`
 }
 
 // Job represents a video generation request
 type Job struct {
 	ID        string    `json:"id"`
 	URL       string    `json:"url"`
+	Theme     string    `json:"theme,omitempty"`
+	Voice     string    `json:"voice,omitempty"`
+	Channel   string    `json:"channel,omitempty"`
 	Status    string    `json:"status"` // queued, processing, completed, failed
 	Progress  string    `json:"progress,omitempty"`
 	VideoPath string    `json:"video_path,omitempty"`
@@ -47,6 +60,7 @@ type Job struct {
 
 type Server struct {
 	cfg        Config
+	cfgMu      sync.RWMutex
 	jobs       map[string]*Job
 	jobsMu     sync.RWMutex
 	jobQueue   chan *Job
@@ -79,7 +93,7 @@ func loadEnvFile(path string) {
 }
 
 func main() {
-	// Auto load .env from current and parent directory
+	// Auto load .env from current, project, and parent directory
 	loadEnvFile(".env")
 	loadEnvFile("../.env")
 	loadEnvFile("../.env.local")
@@ -88,7 +102,6 @@ func main() {
 	cwd, _ := os.Getwd()
 	projectDir := cwd
 	if _, err := os.Stat(filepath.Join(cwd, "package.json")); err != nil {
-		// check parent
 		parent := filepath.Dir(cwd)
 		if _, err := os.Stat(filepath.Join(parent, "package.json")); err == nil {
 			projectDir = parent
@@ -97,7 +110,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "2024" // Default port 2024 requested by user
 	}
 
 	adminChat, _ := strconv.ParseInt(os.Getenv("TELEGRAM_ADMIN_CHAT_ID"), 10, 64)
@@ -107,7 +120,25 @@ func main() {
 		TelegramToken:     os.Getenv("TELEGRAM_BOT_TOKEN"),
 		TelegramAdminChat: adminChat,
 		ProjectDir:        projectDir,
-		MaxConcurrent:     1, // 1 concurrent job by default (ideal for Raspberry Pi 5)
+		MaxConcurrent:     1, // 1 concurrent job by default (ideal for Pi 5)
+		LLMBaseURL:        os.Getenv("LLM_BASE_URL"),
+		LLMAPIKey:         os.Getenv("LLM_API_KEY"),
+		LLMModel:          os.Getenv("LLM_MODEL"),
+		ChannelName:       os.Getenv("CHANNEL_NAME"),
+		TiktokHandle:      os.Getenv("TIKTOK_HANDLE"),
+		TTSProvider:       os.Getenv("TTS_PROVIDER"),
+	}
+	if cfg.LLMModel == "" {
+		cfg.LLMModel = "gemini-3.8-flash"
+	}
+	if cfg.ChannelName == "" {
+		cfg.ChannelName = "LeviaTech"
+	}
+	if cfg.TiktokHandle == "" {
+		cfg.TiktokHandle = "@leviatech"
+	}
+	if cfg.TTSProvider == "" {
+		cfg.TTSProvider = "edge-tts"
 	}
 
 	s := &Server{
@@ -116,14 +147,17 @@ func main() {
 		jobQueue: make(chan *Job, 100),
 	}
 
+	// Scan historical completed videos from output/
+	s.scanExistingOutputs()
+
 	log.Printf("==================================================")
-	log.Printf("🚀 Shorts Generator Server (Golang)")
+	log.Printf("🚀 Shorts Generator Studio (Golang Server)")
 	log.Printf("📁 Project Root : %s", cfg.ProjectDir)
-	log.Printf("🔌 HTTP Server  : http://localhost:%s", cfg.Port)
+	log.Printf("🔌 WebUI & API  : http://localhost:%s", cfg.Port)
 	if cfg.TelegramToken != "" {
 		log.Printf("🤖 Telegram Bot : Enabled (polling active)")
 	} else {
-		log.Printf("🤖 Telegram Bot : Disabled (set TELEGRAM_BOT_TOKEN to enable)")
+		log.Printf("🤖 Telegram Bot : Disabled (configure token in WebUI or .env)")
 	}
 	log.Printf("⚡ Max Concurrency: %d job(s)", cfg.MaxConcurrent)
 	log.Printf("==================================================")
@@ -138,7 +172,17 @@ func main() {
 
 	// Setup HTTP router
 	mux := http.NewServeMux()
+
+	// WebUI root & static
+	mux.HandleFunc("/", s.handleWebUI)
+
+	// Serve assets (avatars, logos)
+	assetsDir := filepath.Join(projectDir, "assets")
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(assetsDir))))
+
+	// REST API
 	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("/api/config", s.handleConfig)
 	mux.HandleFunc("/api/jobs", s.handleJobs)
 	mux.HandleFunc("/api/jobs/", s.handleJobDetail)
 
@@ -150,6 +194,94 @@ func main() {
 	if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Server failed: %v", err)
 	}
+}
+
+// ── HISTORICAL JOBS SCANNER ────────────────────────────────────────────────
+
+func (s *Server) scanExistingOutputs() {
+	outDir := filepath.Join(s.cfg.ProjectDir, "output")
+	entries, err := os.ReadDir(outDir)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		itemDir := filepath.Join(outDir, entry.Name())
+		videoPath := filepath.Join(itemDir, "video.mp4")
+		scriptPath := filepath.Join(itemDir, "script.json")
+
+		if _, err := os.Stat(videoPath); err == nil {
+			info, _ := entry.Info()
+			modTime := time.Now()
+			if info != nil {
+				modTime = info.ModTime()
+			}
+
+			// Read title & url from script.json
+			jobURL := entry.Name()
+			caption := ""
+
+			if scriptBytes, err := os.ReadFile(scriptPath); err == nil {
+				var parsed struct {
+					Metadata struct {
+						Title  string `json:"title"`
+						Source struct {
+							URL string `json:"url"`
+						} `json:"source"`
+					} `json:"metadata"`
+				}
+				if json.Unmarshal(scriptBytes, &parsed) == nil {
+					if parsed.Metadata.Source.URL != "" {
+						jobURL = parsed.Metadata.Source.URL
+					} else if parsed.Metadata.Title != "" {
+						jobURL = parsed.Metadata.Title
+					}
+				}
+			}
+
+			if capBytes, err := os.ReadFile(filepath.Join(itemDir, "caption.txt")); err == nil {
+				caption = string(capBytes)
+			}
+
+			jobID := entry.Name()
+			s.jobs[jobID] = &Job{
+				ID:        jobID,
+				URL:       jobURL,
+				Status:    "completed",
+				Progress:  "Đã hoàn thành",
+				VideoPath: videoPath,
+				OutputDir: itemDir,
+				Caption:   caption,
+				CreatedAt: modTime,
+				UpdatedAt: modTime,
+			}
+		}
+	}
+}
+
+// ── WEBUI HANDLER ──────────────────────────────────────────────────────────
+
+func (s *Server) handleWebUI(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	indexHTML, err := webFS.ReadFile("web/index.html")
+	if err != nil {
+		http.Error(w, "WebUI not found", http.StatusInternalServerError)
+		return
+	}
+
+	// Dynamic replacement of port
+	rendered := strings.ReplaceAll(string(indexHTML), ":2024", ":"+s.cfg.Port)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(rendered))
 }
 
 // ── TASK QUEUE WORKER ───────────────────────────────────────────────────────
@@ -182,6 +314,18 @@ func (s *Server) processJob(job *Job) {
 	}
 	cmd.Dir = s.cfg.ProjectDir
 
+	// Forward custom job options via Environment Variables
+	cmd.Env = os.Environ()
+	if job.Theme != "" {
+		cmd.Env = append(cmd.Env, "VIDEO_THEME="+job.Theme)
+	}
+	if job.Voice != "" {
+		cmd.Env = append(cmd.Env, "EDGE_TTS_VOICE="+job.Voice)
+	}
+	if job.Channel != "" {
+		cmd.Env = append(cmd.Env, "CHANNEL_NAME="+job.Channel)
+	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		s.failJob(job, fmt.Sprintf("failed to get stdout pipe: %v", err))
@@ -199,29 +343,39 @@ func (s *Server) processJob(job *Job) {
 	outputDir := ""
 	videoPath := ""
 
-	outputDirRegex := regexp.MustCompile(`\[Make\]\s+Output dir:\s+(.+)`)
-	doneRegex := regexp.MustCompile(`\[Make\]\s+Done!\s+Video:\s+(.+)`)
+	outputDirRegex := regexp.MustCompile(`(?:\[Make\]\s+Output dir:|Thư mục output:)\s*(.+)`)
+	doneRegex := regexp.MustCompile(`(?:\[Make\]\s+Done!\s+Video:|Video:)\s*(.+)`)
 
 	for scanner.Scan() {
 		line := scanner.Text()
 		log.Printf("[Job %s] %s", job.ID, line)
 
 		if matches := outputDirRegex.FindStringSubmatch(line); len(matches) > 1 {
-			outputDir = strings.TrimSpace(matches[1])
+			rawDir := strings.TrimSpace(matches[1])
+			if !filepath.IsAbs(rawDir) {
+				outputDir = filepath.Join(s.cfg.ProjectDir, rawDir)
+			} else {
+				outputDir = rawDir
+			}
 		}
 		if matches := doneRegex.FindStringSubmatch(line); len(matches) > 1 {
-			videoPath = strings.TrimSpace(matches[1])
+			rawVid := strings.TrimSpace(matches[1])
+			if !filepath.IsAbs(rawVid) {
+				videoPath = filepath.Join(s.cfg.ProjectDir, rawVid)
+			} else {
+				videoPath = rawVid
+			}
 		}
 
-		// Friendly status updates
-		if strings.Contains(line, "Calling LLM") {
+		// Friendly status updates for WebUI
+		if strings.Contains(line, "Calling LLM") || strings.Contains(line, "biên kịch") {
 			s.updateJob(job.ID, func(j *Job) { j.Progress = "AI đang viết kịch bản video..."; j.UpdatedAt = time.Now() })
-		} else if strings.Contains(line, "TTS audio") {
-			s.updateJob(job.ID, func(j *Job) { j.Progress = "Đang lồng tiếng AI..."; j.UpdatedAt = time.Now() })
-		} else if strings.Contains(line, "HyperFrames render") {
+		} else if strings.Contains(line, "TTS audio") || strings.Contains(line, "TTS scene") || strings.Contains(line, "lồng tiếng") {
+			s.updateJob(job.ID, func(j *Job) { j.Progress = "Đang lồng tiếng AI tiếng Việt..."; j.UpdatedAt = time.Now() })
+		} else if strings.Contains(line, "Render with hyperframes") || strings.Contains(line, "Rendering") || strings.Contains(line, "render video") {
 			s.updateJob(job.ID, func(j *Job) { j.Progress = "Đang render đồ họa chuyển động 1080x1920..."; j.UpdatedAt = time.Now() })
 			if job.ChatID != 0 {
-				s.sendTelegramMessage(job.ChatID, fmt.Sprintf("⚡ [Job %s] Đã xong kịch bản & giọng đọc! Đang tiến hành render video...", job.ID))
+				s.sendTelegramMessage(job.ChatID, fmt.Sprintf("⚡ [Job %s] Đã xong kịch bản & giọng đọc! Đang render video...", job.ID))
 			}
 		}
 	}
@@ -229,6 +383,31 @@ func (s *Server) processJob(job *Job) {
 	if err := cmd.Wait(); err != nil {
 		s.failJob(job, fmt.Sprintf("Pipeline process failed: %v", err))
 		return
+	}
+
+	// Fallback detection if regex missed outputDir or videoPath
+	if videoPath == "" || outputDir == "" {
+		allOutDir := filepath.Join(s.cfg.ProjectDir, "output")
+		if entries, err := os.ReadDir(allOutDir); err == nil {
+			var newestDir string
+			var newestTime time.Time
+			for _, entry := range entries {
+				if entry.IsDir() {
+					fullDir := filepath.Join(allOutDir, entry.Name())
+					vPath := filepath.Join(fullDir, "video.mp4")
+					if fi, err := os.Stat(vPath); err == nil {
+						if fi.ModTime().After(newestTime) {
+							newestTime = fi.ModTime()
+							newestDir = fullDir
+						}
+					}
+				}
+			}
+			if newestDir != "" {
+				outputDir = newestDir
+				videoPath = filepath.Join(newestDir, "video.mp4")
+			}
+		}
 	}
 
 	// Read caption if available
@@ -287,11 +466,126 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":      "ok",
 		"version":     "1.0.0",
-		"service":     "shorts-generator-server",
+		"service":     "shorts-generator-studio",
+		"port":        s.cfg.Port,
 		"total_jobs":  totalJobs,
 		"queue_len":   len(s.jobQueue),
 		"project_dir": s.cfg.ProjectDir,
 	})
+}
+
+func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodGet {
+		s.cfgMu.RLock()
+		defer s.cfgMu.RUnlock()
+		json.NewEncoder(w).Encode(s.cfg)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		var req struct {
+			LLMBaseURL    string `json:"llm_base_url"`
+			LLMAPIKey     string `json:"llm_api_key"`
+			LLMModel      string `json:"llm_model"`
+			ChannelName   string `json:"channel_name"`
+			TiktokHandle  string `json:"tiktok_handle"`
+			TTSProvider   string `json:"tts_provider"`
+			TelegramToken string `json:"telegram_token"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, `{"error":"invalid payload"}`, http.StatusBadRequest)
+			return
+		}
+
+		s.cfgMu.Lock()
+		if req.LLMBaseURL != "" {
+			s.cfg.LLMBaseURL = req.LLMBaseURL
+			os.Setenv("LLM_BASE_URL", req.LLMBaseURL)
+		}
+		if req.LLMAPIKey != "" {
+			s.cfg.LLMAPIKey = req.LLMAPIKey
+			os.Setenv("LLM_API_KEY", req.LLMAPIKey)
+		}
+		if req.LLMModel != "" {
+			s.cfg.LLMModel = req.LLMModel
+			os.Setenv("LLM_MODEL", req.LLMModel)
+		}
+		if req.ChannelName != "" {
+			s.cfg.ChannelName = req.ChannelName
+			os.Setenv("CHANNEL_NAME", req.ChannelName)
+		}
+		if req.TiktokHandle != "" {
+			s.cfg.TiktokHandle = req.TiktokHandle
+			os.Setenv("TIKTOK_HANDLE", req.TiktokHandle)
+		}
+		if req.TTSProvider != "" {
+			s.cfg.TTSProvider = req.TTSProvider
+			os.Setenv("TTS_PROVIDER", req.TTSProvider)
+		}
+		if req.TelegramToken != "" && s.cfg.TelegramToken != req.TelegramToken {
+			s.cfg.TelegramToken = req.TelegramToken
+			os.Setenv("TELEGRAM_BOT_TOKEN", req.TelegramToken)
+			go s.startTelegramPoller()
+		}
+		s.cfgMu.Unlock()
+
+		// Persist updates to .env file in ProjectDir
+		s.saveConfigToEnv()
+
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "updated"})
+		return
+	}
+
+	http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
+}
+
+func (s *Server) saveConfigToEnv() {
+	envPath := filepath.Join(s.cfg.ProjectDir, ".env")
+	content, err := os.ReadFile(envPath)
+	if err != nil {
+		return
+	}
+
+	lines := strings.Split(string(content), "\n")
+	updates := map[string]string{
+		"LLM_BASE_URL":       s.cfg.LLMBaseURL,
+		"LLM_API_KEY":        s.cfg.LLMAPIKey,
+		"LLM_MODEL":          s.cfg.LLMModel,
+		"CHANNEL_NAME":       s.cfg.ChannelName,
+		"TIKTOK_HANDLE":      s.cfg.TiktokHandle,
+		"TTS_PROVIDER":       s.cfg.TTSProvider,
+		"TELEGRAM_BOT_TOKEN": s.cfg.TelegramToken,
+	}
+
+	var newLines []string
+	seen := make(map[string]bool)
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		replaced := false
+		for k, v := range updates {
+			if strings.HasPrefix(trimmed, k+"=") {
+				newLines = append(newLines, fmt.Sprintf("%s=%s", k, v))
+				seen[k] = true
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			newLines = append(newLines, line)
+		}
+	}
+
+	for k, v := range updates {
+		if !seen[k] && v != "" {
+			newLines = append(newLines, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
+	_ = os.WriteFile(envPath, []byte(strings.Join(newLines, "\n")), 0644)
 }
 
 func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
@@ -310,7 +604,10 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		var req struct {
-			URL string `json:"url"`
+			URL     string `json:"url"`
+			Theme   string `json:"theme,omitempty"`
+			Voice   string `json:"voice,omitempty"`
+			Channel string `json:"channel,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.URL == "" {
 			http.Error(w, `{"error":"missing url"}`, http.StatusBadRequest)
@@ -321,6 +618,9 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 		job := &Job{
 			ID:        jobID,
 			URL:       req.URL,
+			Theme:     req.Theme,
+			Voice:     req.Voice,
+			Channel:   req.Channel,
 			Status:    "queued",
 			Progress:  "Đang chờ xếp hàng...",
 			CreatedAt: time.Now(),
@@ -343,6 +643,8 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleJobDetail(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/jobs/")
+
+	// Stream video: /api/jobs/{id}/video
 	if strings.HasSuffix(id, "/video") {
 		jobID := strings.TrimSuffix(id, "/video")
 		s.jobsMu.RLock()
@@ -352,6 +654,7 @@ func (s *Server) handleJobDetail(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
+		w.Header().Set("Content-Type", "video/mp4")
 		http.ServeFile(w, r, job.VideoPath)
 		return
 	}
@@ -387,7 +690,16 @@ func (s *Server) startTelegramPoller() {
 	client := &http.Client{Timeout: 35 * time.Second}
 
 	for {
-		reqURL := fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates?offset=%d&timeout=30", s.cfg.TelegramToken, offset)
+		s.cfgMu.RLock()
+		token := s.cfg.TelegramToken
+		s.cfgMu.RUnlock()
+
+		if token == "" {
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		reqURL := fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates?offset=%d&timeout=30", token, offset)
 		resp, err := client.Get(reqURL)
 		if err != nil {
 			time.Sleep(5 * time.Second)
@@ -450,22 +762,29 @@ func (s *Server) startTelegramPoller() {
 }
 
 func (s *Server) sendTelegramMessage(chatID int64, text string) {
-	if s.cfg.TelegramToken == "" {
+	s.cfgMu.RLock()
+	token := s.cfg.TelegramToken
+	s.cfgMu.RUnlock()
+	if token == "" {
 		return
 	}
+
 	body, _ := json.Marshal(map[string]interface{}{
 		"chat_id": chatID,
 		"text":    text,
 	})
 	http.Post(
-		fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", s.cfg.TelegramToken),
+		fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token),
 		"application/json",
 		bytes.NewReader(body),
 	)
 }
 
 func (s *Server) sendTelegramVideo(chatID int64, videoPath, caption string) {
-	if s.cfg.TelegramToken == "" {
+	s.cfgMu.RLock()
+	token := s.cfg.TelegramToken
+	s.cfgMu.RUnlock()
+	if token == "" {
 		return
 	}
 
@@ -503,7 +822,7 @@ func (s *Server) sendTelegramVideo(chatID int64, videoPath, caption string) {
 	req, err := http.NewRequestWithContext(
 		context.Background(),
 		http.MethodPost,
-		fmt.Sprintf("https://api.telegram.org/bot%s/sendVideo", s.cfg.TelegramToken),
+		fmt.Sprintf("https://api.telegram.org/bot%s/sendVideo", token),
 		body,
 	)
 	if err != nil {
