@@ -12,7 +12,7 @@
     "id": "codedao",
     "name": "Code Dạo Review",
     "handle": "@codedao.vn",
-    "avatar": "/assets/avatar.jpg",
+    "avatar": "/assets/channels/codedao.jpg",
     "voice": "vi-VN-HoaiMyNeural",
     "theme": "bold-poster",
     "is_default": false
@@ -21,7 +21,7 @@
     "id": "aitrend",
     "name": "AI Explorer VN",
     "handle": "@aiexplorer.vn",
-    "avatar": "/assets/avatar.jpg",
+    "avatar": "/assets/channels/aitrend.jpg",
     "voice": "vi-VN-DaLyNeural",
     "theme": "liquid-aurora",
     "is_default": false
