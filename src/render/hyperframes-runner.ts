@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { relative } from "node:path";
 import { log } from "../utils/logger.js";
 
 export interface RenderArgs {
@@ -11,14 +12,16 @@ export interface RenderArgs {
 export async function renderWithHyperframes(args: RenderArgs): Promise<void> {
   const { compositionDir, outputPath, fps = 30, quality = "standard" } = args;
 
-  const isWin = process.platform === "win32";
-  const cmd = isWin ? "npx.cmd" : "npx";
+  // Make paths relative to cwd to avoid spaces in drive path (e.g. "F:\auto gen video")
+  const relCompDir = relative(process.cwd(), compositionDir) || compositionDir;
+  const relOutPath = relative(process.cwd(), outputPath) || outputPath;
+
   const spawnArgs = [
     "hyperframes",
     "render",
-    compositionDir,
+    relCompDir,
     "--output",
-    outputPath,
+    relOutPath,
     "--fps",
     String(fps),
     "--quality",
@@ -26,9 +29,9 @@ export async function renderWithHyperframes(args: RenderArgs): Promise<void> {
   ];
 
   await new Promise<void>((resolve, reject) => {
-    const proc = spawn(cmd, spawnArgs, {
+    const proc = spawn("npx", spawnArgs, {
       stdio: ["ignore", "inherit", "inherit"],
-      shell: false,
+      shell: true,
     });
 
     proc.on("close", (code) => {
@@ -43,19 +46,8 @@ export async function renderWithHyperframes(args: RenderArgs): Promise<void> {
       }
     });
 
-    proc.on("error", () => {
-      // Fallback with shell: true and quoted arguments if direct npx.cmd fails
-      const quotedArgs = spawnArgs.map((a) => (a.includes(" ") ? `"${a}"` : a));
-      const fallback = spawn("npx", quotedArgs, {
-        stdio: ["ignore", "inherit", "inherit"],
-        shell: true,
-      });
-
-      fallback.on("close", (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`hyperframes render failed with exit code ${code}`));
-      });
-      fallback.on("error", (err) => reject(err));
+    proc.on("error", (err) => {
+      reject(err);
     });
   });
 
