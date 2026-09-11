@@ -202,11 +202,15 @@ function stripMarkdown(md: string): string {
   return md
     .replace(/```[\s\S]*?```/g, "")
     .replace(/`([^`]+)`/g, "$1")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<[^>]+>/g, " ")
     .replace(/!\[.*?\]\(.*?\)/g, "")
     .replace(/\[(.*?)\]\(.*?\)/g, "$1")
     .replace(/#{1,6}\s+/g, "")
     .replace(/[*_~]{1,3}/g, "")
     .replace(/https?:\/\/\S+/g, "") // remove URLs from prompt text to prevent AI triggering URL safety
+    .replace(/(?:Udemy|Coursera|Khóa học|Ủng hộ|Donate|Sponsor|Patreon)[\s\S]{0,300}/gi, "")
+    .replace(/[ \t]+/g, " ")
     .replace(/\n\s*\n/g, "\n\n")
     .trim();
 }

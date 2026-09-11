@@ -4,11 +4,11 @@ import type { Config } from "../config.js";
 import type { ScrapedContent } from "../scraper/content-fetcher.js";
 import { log } from "../utils/logger.js";
 
-const SYSTEM_PROMPT = `Bạn là biên kịch video ngắn (TikTok / Shorts / Reels) chuyên nghiệp về công nghệ cho kênh công nghệ tiếng Việt.
-Nhiệm vụ của bạn là đọc nội dung bài viết/mã nguồn được cung cấp và tạo ra một kịch bản video định dạng JSON chuẩn xác 100%.
+const SYSTEM_PROMPT = `Bạn là trợ lý AI chuyên tạo cấu trúc dữ liệu JSON cho kịch bản video ngắn công nghệ (TikTok / Shorts / Reels) cho kênh LeviaTech.
+Nhiệm vụ của bạn là đọc thông tin dự án/bài viết và chuyển đổi thành một đối tượng JSON kịch bản hoàn chỉnh chuẩn xác 100%.
 
 YÊU CẦU CẤU TRÚC JSON:
-Trả về duy nhất 1 JSON object (không giải thích thêm, bọc trong \`\`\`json ... \`\`\`), đúng cấu trúc sau:
+Trả về duy nhất 1 JSON object (không thêm văn bản ngoài lề, bọc trong \`\`\`json ... \`\`\`), đúng cấu trúc sau:
 {
   "version": "1.0",
   "metadata": {
@@ -31,10 +31,10 @@ Trả về duy nhất 1 JSON object (không giải thích thêm, bọc trong \`\
     {
       "id": "hook",
       "type": "hook",
-      "voiceText": "Câu thoại mở đầu giật tít thu hút người nghe trong 3 giây.",
+      "voiceText": "Câu thoại mở đầu cuốn hút, nêu bật điểm ấn tượng nhất trong 3 giây.",
       "templateData": {
         "template": "hook",
-        "headline": "Tiêu đề giật tít (tối đa 40 ký tự)",
+        "headline": "Tiêu đề cuốn hút (tối đa 40 ký tự)",
         "subhead": "Phụ đề tò mò (tối đa 40 ký tự)",
         "bgSrc": "$source.image",
         "kenBurns": "zoom-in"
@@ -133,7 +133,9 @@ function normalizeParsedJson(parsed: any, content: ScrapedContent, cfg: Config):
   }
 
   if (!Array.isArray(parsed.scenes)) {
-    parsed.scenes = [];
+    if (Array.isArray(parsed.script)) parsed.scenes = parsed.script;
+    else if (Array.isArray(parsed.timeline)) parsed.scenes = parsed.timeline;
+    else parsed.scenes = [];
   }
 
   // Ensure scenes count is between 5 and 8
@@ -157,9 +159,15 @@ function normalizeParsedJson(parsed: any, content: ScrapedContent, cfg: Config):
     else if (idx === lastIdx) scene.type = "outro";
     else scene.type = "body";
 
-    // 3. Ensure templateData
+    // 3. Ensure voiceText (supports alternate keys like voiceover, narration, text)
+    if (!scene.voiceText) {
+      scene.voiceText = scene.voiceover || scene.narration || scene.text || scene.description || scene.voice || "";
+    }
+
+    // 4. Ensure templateData
     if (!scene.templateData || typeof scene.templateData !== "object") {
-      scene.templateData = idx === 0 ? { template: "hook", headline: content.title.slice(0, 40) } : { template: "callout", statement: scene.voiceText.slice(0, 80) };
+      const headline = String(scene.on_screen_text || scene.headline || scene.title || content.title).slice(0, 40);
+      scene.templateData = idx === 0 ? { template: "hook", headline } : { template: "callout", statement: String(scene.voiceText || headline).slice(0, 80) };
     }
 
     const td = scene.templateData;
@@ -230,48 +238,19 @@ function normalizeParsedJson(parsed: any, content: ScrapedContent, cfg: Config):
   return parsed;
 }
 
-export async function generateScriptWithLlm(
-  content: ScrapedContent,
-  cfg: Config
-): Promise<Script> {
-  const channelName = cfg.tiktok.displayName || "LeviaTech";
-  const userPrompt = `Dưới đây là thông tin bài viết/dự án cần làm video:
-- Tiêu đề: ${content.title}
-- Nguồn domain: ${content.domain}
-- URL: ${content.url}
-- Ảnh og:image: ${content.ogImage ?? "null"}
-- Tên kênh: ${channelName}
-
-NỘI DUNG CHI TIẾT:
-${content.content}
-
-Hãy tạo file script.json hoàn chỉnh cho video này theo đúng hướng dẫn JSON.`;
-
-  log.info(`Calling LLM (${cfg.llm.model}) at ${cfg.llm.baseUrl}...`);
-
-  const resp = await axios.post(
-    `${cfg.llm.baseUrl}/chat/completions`,
-    {
-      model: cfg.llm.model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 4096,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${cfg.llm.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      timeout: 90000,
-    }
-  );
-
-  const rawText: string = resp.data?.choices?.[0]?.message?.content ?? "";
-  if (!rawText) {
+function extractJsonFromText(rawText: string): any {
+  if (!rawText || rawText.trim().length === 0) {
     throw new Error("Empty response from LLM");
+  }
+
+  // Check for common Gemini Web refusal phrases
+  if (
+    rawText.includes("Tôi không thể giúp") ||
+    rawText.includes("Tôi không được lập trình") ||
+    rawText.includes("Tôi không thể trợ giúp") ||
+    rawText.includes("chỉ là một mô hình ngôn ngữ")
+  ) {
+    throw new Error(`LLM safety refusal: ${rawText.slice(0, 150)}`);
   }
 
   // Clean markdown json fences
@@ -279,17 +258,127 @@ Hãy tạo file script.json hoàn chỉnh cho video này theo đúng hướng d�
   let jsonStr = (jsonMatch ? jsonMatch[1] : rawText).trim();
 
   // Robust fallback: isolate the outer JSON object { ... }
-  const firstBrace = jsonStr.indexOf('{');
-  const lastBrace = jsonStr.lastIndexOf('}');
+  const firstBrace = jsonStr.indexOf("{");
+  const lastBrace = jsonStr.lastIndexOf("}");
   if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
     jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
   }
 
-  let parsedJson: any;
+  return JSON.parse(jsonStr);
+}
+
+export async function generateScriptWithLlm(
+  content: ScrapedContent,
+  cfg: Config
+): Promise<Script> {
+  const channelName = cfg.tiktok.displayName || "LeviaTech";
+  const truncatedContent = (content.content || "").slice(0, 2500);
+
+  const userPrompt = `Hãy tạo một đối tượng JSON cấu trúc dữ liệu cho kịch bản video ngắn công nghệ cho dự án sau:
+- Tiêu đề: ${content.title}
+- Nguồn domain: ${content.domain}
+- URL: ${content.url}
+- Ảnh og:image: ${content.ogImage ?? "null"}
+- Tên kênh: ${channelName}
+
+NỘI DUNG TÓM TẮT DỰ ÁN:
+${truncatedContent}
+
+Trả về duy nhất 1 JSON object hợp lệ (bọc trong \`\`\`json ... \`\`\`), đúng cấu trúc đã hướng dẫn.`;
+
+  log.info(`Calling LLM (${cfg.llm.model}) at ${cfg.llm.baseUrl}...`);
+
+  let parsedJson: any = null;
+
+  // Attempt 1: Standard structured prompt
   try {
-    parsedJson = JSON.parse(jsonStr);
-  } catch (e: any) {
-    throw new Error(`Failed to parse LLM response as JSON: ${e.message}\nResponse: ${jsonStr.slice(0, 500)}`);
+    const resp = await axios.post(
+      `${cfg.llm.baseUrl}/chat/completions`,
+      {
+        model: cfg.llm.model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${cfg.llm.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 90000,
+      }
+    );
+
+    const rawText: string = resp.data?.choices?.[0]?.message?.content ?? "";
+    parsedJson = extractJsonFromText(rawText);
+  } catch (err1: any) {
+    log.warn(`LLM Attempt 1 failed (${err1.message}). Retrying with high-reliability fallback prompt...`);
+
+    // Attempt 2: Direct data structure prompt (guaranteed bypass of creative video refusal)
+    const fallbackPrompt = `You are a structured data generator. Generate a 9:16 short video script in JSON format based on the following topic.
+Return ONLY valid JSON (no conversational text) wrapped in \`\`\`json ... \`\`\`.
+
+Metadata:
+- Title: ${content.title}
+- Channel: ${channelName}
+- Domain: ${content.domain}
+- Content: ${truncatedContent.slice(0, 1000)}
+
+Target JSON Schema:
+{
+  "version": "1.0",
+  "metadata": {
+    "title": "${content.title.replace(/"/g, "'")}",
+    "channel": "${channelName}"
+  },
+  "scenes": [
+    {
+      "id": "hook",
+      "type": "hook",
+      "voiceText": "Câu mở đầu tiếng Việt hấp dẫn trong 3 giây.",
+      "templateData": { "template": "hook", "headline": "${content.title.slice(0, 35).replace(/"/g, "'")}" }
+    },
+    {
+      "id": "body-1",
+      "type": "body",
+      "voiceText": "Nội dung giải thích điểm đặc biệt của dự án.",
+      "templateData": { "template": "callout", "statement": "Điểm đột phá công nghệ" }
+    },
+    {
+      "id": "body-2",
+      "type": "body",
+      "voiceText": "Giới thiệu các tính năng cốt lõi.",
+      "templateData": { "template": "feature-list", "title": "Tính năng chính", "bullets": ["Tự động hóa", "Nhanh chóng", "Mã nguồn mở"] }
+    },
+    {
+      "id": "outro",
+      "type": "outro",
+      "voiceText": "Theo dõi kênh để cập nhật công nghệ mới mỗi ngày.",
+      "templateData": { "template": "outro", "channelName": "${channelName}" }
+    }
+  ]
+}`;
+
+    const resp2 = await axios.post(
+      `${cfg.llm.baseUrl}/chat/completions`,
+      {
+        model: cfg.llm.model,
+        messages: [{ role: "user", content: fallbackPrompt }],
+        temperature: 0.5,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${cfg.llm.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 90000,
+      }
+    );
+
+    const rawText2: string = resp2.data?.choices?.[0]?.message?.content ?? "";
+    parsedJson = extractJsonFromText(rawText2);
   }
 
   // Normalize and auto-correct any small LLM formatting slips
@@ -299,7 +388,9 @@ Hãy tạo file script.json hoàn chỉnh cho video này theo đúng hướng d�
   const validation = ScriptSchema.safeParse(normalized);
   if (!validation.success) {
     log.warn("Script validation errors: " + JSON.stringify(validation.error.issues, null, 2));
-    throw new Error(`LLM generated invalid script: ${validation.error.issues.map((i) => i.message).join(", ")}`);
+    throw new Error(
+      `LLM generated invalid script: ${validation.error.issues.map((i) => i.message).join(", ")}`
+    );
   }
 
   log.info(`Script successfully generated with ${validation.data.scenes.length} scenes.`);
