@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Git and CI/CD
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables & secrets (prevent leaking credentials)
+.env
+.env.local
+.env.*.local
+
+# Build artifacts & output
+output/
+dist/
+build/
+coverage/
+
+# Go compiled binaries
+server/server
+server/*.exe
+*.exe
+
+# Large media files
+SFX/
+*.mp4
+*.webm
+*.wav
+*.mp3
+
+# Temporary and debug files
+debug-*.ts
+*.log
+tmp/
+temp/
+.DS_Store
+Thumbs.db

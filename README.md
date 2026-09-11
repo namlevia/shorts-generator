@@ -212,6 +212,43 @@ cd ..
 
 ---
 
+## 🐳 Triển khai nhanh bằng Docker & Docker Compose
+
+Toàn bộ hệ thống (Golang Server, WebUI Studio, Node.js Pipeline, FFmpeg, Chromium & Fonts Tiếng Việt) đã được đóng gói sẵn sàng:
+
+### Cách 1: Khởi chạy 1 lệnh với Docker Compose (Khuyên dùng)
+```bash
+# 1. Tạo file cấu hình từ mẫu (nếu chưa có)
+cp .env.example .env
+
+# 2. Build và khởi chạy container chạy nền
+docker compose up -d --build
+
+# 3. Xem log thời gian thực
+docker compose logs -f
+```
+Truy cập ngay WebUI Studio tại: **`http://localhost:2024`**
+
+Dữ liệu video render (`output/`), danh sách kênh (`server/channels.json`) và avatar tùy chỉnh (`assets/channels/`) tự động mount ra máy chủ để bảo toàn dữ liệu khi cập nhật container.
+
+### Cách 2: Build & Chạy thủ công với Dockerfile
+```bash
+# Build Docker image
+docker build -t shorts-generator .
+
+# Chạy container
+docker run -d \
+  --name shorts-generator \
+  -p 2024:2024 \
+  --env-file .env \
+  -v "$(pwd)/output:/app/output" \
+  -v "$(pwd)/server/channels.json:/app/server/channels.json" \
+  shorts-generator
+```
+
+---
+
+
 ## 📄 Bản quyền
 
 Phát hành theo giấy phép [MIT License](LICENSE).  

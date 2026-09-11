@@ -1,0 +1,37 @@
+services:
+  shorts-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shorts-generator:latest
+    container_name: shorts-generator
+    restart: unless-stopped
+    ports:
+      - "${PORT:-2024}:2024"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - PORT=2024
+      - NODE_ENV=production
+      - RENDER_ENGINE=local
+      - TTS_PROVIDER=${TTS_PROVIDER:-edge-tts}
+      - EDGE_TTS_VOICE=${EDGE_TTS_VOICE:-vi-VN-NamMinhNeural}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_MODEL=${LLM_MODEL:-gemini-3.8-flash}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID:-0}
+    volumes:
+      # Video output storage (keeps rendered MP4 videos persistent on host)
+      - ./output:/app/output
+      # Channel matrix profiles persistence (allows creating/updating channels via WebUI)
+      - ./server/channels.json:/app/server/channels.json
+      # Custom channel avatars storage
+      - ./assets/channels:/app/assets/channels
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:2024/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
