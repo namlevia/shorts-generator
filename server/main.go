@@ -645,7 +645,14 @@ func (s *Server) processGitHubJob(job *Job) {
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		s.failJob(job, fmt.Sprintf("GitHub Actions trả về lỗi (HTTP %d): %s", resp.StatusCode, string(respBody)))
+		var ghErr struct {
+			Message string `json:"message"`
+		}
+		errMsg := string(respBody)
+		if json.Unmarshal(respBody, &ghErr) == nil && ghErr.Message != "" {
+			errMsg = ghErr.Message
+		}
+		s.failJob(job, fmt.Sprintf("GitHub lỗi (HTTP %d): %s", resp.StatusCode, errMsg))
 		return
 	}
 
@@ -1131,6 +1138,33 @@ func (s *Server) handleJobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == http.MethodDelete {
+		filter := r.URL.Query().Get("filter") // "all" or "done" (default)
+		s.jobsMu.Lock()
+		deleted := 0
+		for id, j := range s.jobs {
+			shouldDel := false
+			if filter == "all" {
+				shouldDel = true
+			} else if j.Status == "completed" || j.Status == "failed" {
+				shouldDel = true
+			}
+
+			if shouldDel {
+				if filter == "all" && j.OutputDir != "" && strings.HasPrefix(j.OutputDir, s.cfg.ProjectDir) {
+					_ = os.RemoveAll(j.OutputDir)
+				}
+				delete(s.jobs, id)
+				deleted++
+			}
+		}
+		s.jobsMu.Unlock()
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "deleted": deleted})
+		return
+	}
+
 	http.Error(w, `{"error":"method not allowed"}`, http.StatusMethodNotAllowed)
 }
 
@@ -1149,6 +1183,30 @@ func (s *Server) handleJobDetail(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "video/mp4")
 		http.ServeFile(w, r, job.VideoPath)
+		return
+	}
+
+	if r.Method == http.MethodDelete {
+		s.jobsMu.Lock()
+		job, ok := s.jobs[id]
+		if ok {
+			delete(s.jobs, id)
+		}
+		s.jobsMu.Unlock()
+
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+
+		// Clean up output files if within ProjectDir
+		if job.OutputDir != "" && strings.HasPrefix(job.OutputDir, s.cfg.ProjectDir) {
+			_ = os.RemoveAll(job.OutputDir)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"success":true}`))
 		return
 	}
 

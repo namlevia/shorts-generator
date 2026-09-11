@@ -475,6 +475,20 @@
       background: rgba(255, 255, 255, 0.12);
     }
 
+    .btn-danger-action {
+      background: rgba(239, 68, 68, 0.15) !important;
+      border: 1px solid rgba(239, 68, 68, 0.4) !important;
+      color: #fca5a5 !important;
+      cursor: pointer;
+    }
+
+    .btn-danger-action:hover {
+      background: rgba(239, 68, 68, 0.35) !important;
+      border-color: #ef4444 !important;
+      color: #fff !important;
+      transform: translateY(-1px);
+    }
+
     /* MODAL FOR VIDEO PLAYER */
     .modal-overlay {
       display: none;
@@ -719,7 +733,10 @@
             <h2 class="card-title" data-i18n="queue.title">📋 Hàng Đợi & Lịch Sử Video</h2>
             <p class="card-subtitle" style="margin-bottom: 0;" data-i18n="queue.subtitle">Theo dõi tiến trình sinh video theo thời gian thực và xem lại các video đã render.</p>
           </div>
-          <button class="btn-action" onclick="fetchJobs()" data-i18n="queue.btnRefresh">🔄 Làm mới</button>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button class="btn-action" onclick="fetchJobs()" data-i18n="queue.btnRefresh">🔄 Làm mới</button>
+            <button class="btn-action btn-danger-action" onclick="handleClearJobs('done')" data-i18n="queue.btnClearDone" title="Dọn dẹp các job đã hoàn thành hoặc thất bại">🧹 Dọn dẹp</button>
+          </div>
         </div>
 
         <div class="table-responsive">
@@ -907,6 +924,12 @@
         "queue.empty": "Chưa có video nào trong danh sách. Hãy sang tab Studio tạo video đầu tiên!",
         "queue.loading": "Đang tải danh sách...",
         "queue.btnWatch": "▶ Xem Video",
+        "queue.btnDelete": "Xóa",
+        "queue.btnCancel": "Hủy",
+        "queue.btnClearDone": "🧹 Dọn dẹp",
+        "queue.viewErrorDetail": "🔍 Chi tiết lỗi",
+        "queue.confirmDelete": "Bạn có chắc chắn muốn xóa video này không?",
+        "queue.confirmClear": "Bạn có chắc muốn dọn dẹp tất cả các job đã xong hoặc thất bại?",
         "queue.error": "Lỗi",
         
         // Tab 3: Settings
@@ -946,6 +969,9 @@
         "toast.configSuccess": "✅ Đã lưu cấu hình hệ thống thành công!",
         "toast.configError": "❌ Lưu cấu hình thất bại: ",
         "toast.copySuccess": "📋 Đã sao chép caption vào clipboard!",
+        "toast.deleteSuccess": "🗑️ Đã xóa video thành công!",
+        "toast.deleteError": "❌ Xóa thất bại: ",
+        "toast.clearSuccess": "🧹 Đã dọn dẹp hàng đợi thành công!",
       },
       en: {
         // Brand & Header
@@ -1001,6 +1027,12 @@
         "queue.empty": "No videos in list yet. Head over to Studio to generate your first video!",
         "queue.loading": "Loading video list...",
         "queue.btnWatch": "▶ Watch Video",
+        "queue.btnDelete": "Delete",
+        "queue.btnCancel": "Cancel",
+        "queue.btnClearDone": "🧹 Clean Up",
+        "queue.viewErrorDetail": "🔍 Error Details",
+        "queue.confirmDelete": "Are you sure you want to delete this job?",
+        "queue.confirmClear": "Are you sure you want to clear completed and failed jobs?",
         "queue.error": "Error",
         
         // Tab 3: Settings
@@ -1040,6 +1072,9 @@
         "toast.configSuccess": "✅ System settings saved successfully!",
         "toast.configError": "❌ Failed to save settings: ",
         "toast.copySuccess": "📋 Caption copied to clipboard!",
+        "toast.deleteSuccess": "🗑️ Job deleted successfully!",
+        "toast.deleteError": "❌ Failed to delete job: ",
+        "toast.clearSuccess": "🧹 Queue cleaned up successfully!",
       }
     };
 
@@ -1191,9 +1226,54 @@
 
         let actionBtn = '';
         if (j.status === 'completed') {
-          actionBtn = `<button class="btn-action" onclick="openVideoModal('${j.id}')">${t('queue.btnWatch')}</button>`;
+          actionBtn = `
+            <div style="display:inline-flex; gap:6px; align-items:center;">
+              <button class="btn-action" onclick="openVideoModal('${j.id}')">${t('queue.btnWatch')}</button>
+              <button class="btn-action btn-danger-action" onclick="handleDeleteJob('${j.id}')" title="${t('queue.btnDelete')}">🗑️</button>
+            </div>`;
         } else if (j.status === 'failed') {
-          actionBtn = `<span style="font-size:12px; color:var(--danger); font-weight:600;" title="${j.error || ''}">⚠️ ${t('queue.error')}</span>`;
+          actionBtn = `
+            <div style="display:inline-flex; gap:6px; align-items:center;">
+              <button class="btn-action btn-danger-action" onclick="handleDeleteJob('${j.id}')" title="${t('queue.btnDelete')}">🗑️ ${t('queue.btnDelete')}</button>
+            </div>`;
+        } else {
+          actionBtn = `
+            <div style="display:inline-flex; gap:6px; align-items:center;">
+              <button class="btn-action btn-danger-action" onclick="handleDeleteJob('${j.id}')" title="${t('queue.btnCancel')}">✕</button>
+            </div>`;
+        }
+
+        let progressHtml = '';
+        if (j.status === 'failed') {
+          const rawErr = j.error || j.progress || 'Lỗi không xác định';
+          let cleanErr = rawErr;
+          const jsonMatch = rawErr.match(/\{.*"message"\s*:\s*"([^"]+)".*\}/s);
+          if (jsonMatch && jsonMatch[1]) {
+            cleanErr = jsonMatch[1];
+          } else {
+            cleanErr = cleanErr.replace(/^GitHub Actions trả về lỗi \(HTTP \d+\):\s*/i, 'Lỗi GitHub: ');
+          }
+
+          const isLong = cleanErr.length > 65;
+          const shortErr = isLong ? cleanErr.slice(0, 65) + '...' : cleanErr;
+
+          progressHtml = `
+            <div>
+              <div style="color:var(--danger); font-size:12px; line-height:1.4; font-weight:600;">
+                ❌ ${escapeHtml(shortErr)}
+              </div>
+              ${isLong ? `
+                <details style="font-size:11px; margin-top:3px; cursor:pointer;">
+                  <summary style="color:var(--accent-cyan); font-weight:600; outline:none;">${t('queue.viewErrorDetail')}</summary>
+                  <div style="margin-top:4px; padding:6px 8px; background:rgba(10,15,30,0.8); border:1px solid rgba(239,68,68,0.3); border-radius:6px; color:#fca5a5; font-family:'Space Mono',monospace; font-size:11px; word-break:break-all; max-height:100px; overflow-y:auto;">
+                    ${escapeHtml(rawErr)}
+                  </div>
+                </details>
+              ` : ''}
+            </div>
+          `;
+        } else {
+          progressHtml = `<span style="color:var(--text-muted); font-size:13px; line-height:1.4;">${escapeHtml(j.progress || (j.status === 'completed' ? t('queue.statusCompleted') : ''))}</span>`;
         }
 
         return `
@@ -1209,14 +1289,53 @@
               </div>
             </td>
             <td style="min-width:240px; max-width:380px; white-space:normal; line-height:1.4; color:var(--text-muted); font-size:13px;">
-              ${j.progress || ''}
-              ${j.error ? `<div style="color:var(--danger); font-size:12px; margin-top:4px;">❌ ${j.error}</div>` : ''}
+              ${progressHtml}
             </td>
             <td style="white-space:nowrap; color:var(--text-muted); font-size:13px;">${timeStr}</td>
             <td style="white-space:nowrap;">${actionBtn}</td>
           </tr>
         `;
       }).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    async function handleDeleteJob(jobId) {
+      if (!confirm(t('queue.confirmDelete'))) return;
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast(t('toast.deleteSuccess'));
+          fetchJobs();
+        } else {
+          showToast(t('toast.deleteError'));
+        }
+      } catch (err) {
+        showToast(t('toast.deleteError') + err.message);
+      }
+    }
+
+    async function handleClearJobs(filter) {
+      if (!confirm(t('queue.confirmClear'))) return;
+      try {
+        const res = await fetch(`/api/jobs?filter=${filter || 'done'}`, { method: 'DELETE' });
+        if (res.ok) {
+          showToast(t('toast.clearSuccess'));
+          fetchJobs();
+        } else {
+          showToast(t('toast.deleteError'));
+        }
+      } catch (err) {
+        showToast(t('toast.deleteError') + err.message);
+      }
     }
 
     function openVideoModal(jobId) {
