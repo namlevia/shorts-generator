@@ -552,23 +552,210 @@
       color: #cbd5e1;
     }
 
-    .toast {
-      position: fixed; bottom: 24px; right: 24px;
-      background: #1e293b; color: #fff;
-      border: 1px solid var(--accent-cyan);
-      padding: 14px 24px;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      transform: translateY(100px);
-      opacity: 0;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 200;
+    /* CONFIRMATION DIALOG MODAL */
+    .confirm-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(4, 7, 18, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
 
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
+    .confirm-overlay.open {
+      display: flex;
     }
+
+    .confirm-dialog-card {
+      background: rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      max-width: 440px;
+      width: 100%;
+      padding: 28px 24px 24px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(239, 68, 68, 0.15);
+      text-align: center;
+      animation: dialogPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      position: relative;
+    }
+
+    @keyframes dialogPop {
+      from { opacity: 0; transform: scale(0.92) translateY(12px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .confirm-icon-wrapper {
+      margin: 0 auto 16px;
+      width: 58px; height: 58px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .confirm-icon-wrapper.danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    }
+
+    .confirm-icon-wrapper.warning {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+    }
+
+    .confirm-icon-wrapper.info {
+      background: rgba(34, 211, 238, 0.15);
+      border: 1px solid rgba(34, 211, 238, 0.4);
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+    }
+
+    .confirm-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .confirm-message {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+      padding: 0 8px;
+    }
+
+    .confirm-btn-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .btn-dialog-cancel {
+      flex: 1;
+      padding: 12px 18px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-dialog-cancel:hover {
+      background: rgba(255, 255, 255, 0.14);
+      color: #fff;
+    }
+
+    .btn-dialog-confirm {
+      flex: 1;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-dialog-confirm.danger {
+      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+      box-shadow: 0 4px 18px rgba(239, 68, 68, 0.45);
+    }
+    .btn-dialog-confirm.danger:hover {
+      box-shadow: 0 6px 24px rgba(239, 68, 68, 0.65);
+      transform: translateY(-1px);
+    }
+
+    .btn-dialog-confirm.warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 4px 18px rgba(245, 158, 11, 0.45);
+    }
+    .btn-dialog-confirm.warning:hover {
+      box-shadow: 0 6px 24px rgba(245, 158, 11, 0.65);
+      transform: translateY(-1px);
+    }
+
+    /* MODERN TOAST NOTIFICATION */
+    .toast-pill {
+      position: fixed;
+      top: 28px;
+      right: 28px;
+      background: rgba(15, 23, 42, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px 20px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 400;
+      transform: translateY(-35px) scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+      max-width: 440px;
+    }
+
+    .toast-pill.show {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .toast-icon-box {
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .toast-text-box {
+      font-size: 14px;
+      font-weight: 500;
+      color: #fff;
+      line-height: 1.4;
+    }
+
+    .toast-pill.toast-success {
+      border-color: rgba(16, 185, 129, 0.5);
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.25);
+    }
+
+    .toast-pill.toast-error {
+      border-color: rgba(239, 68, 68, 0.5);
+      box-shadow: 0 10px 30px rgba(239, 68, 68, 0.25);
+    }
+
+    .toast-pill.toast-info {
+      border-color: rgba(34, 211, 238, 0.5);
+      box-shadow: 0 10px 30px rgba(34, 211, 238, 0.25);
+    }
+
+    .toast-progress-bar {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: var(--accent-cyan);
+      width: 100%;
+    }
+
+    .toast-success .toast-progress-bar { background: #10b981; }
+    .toast-error .toast-progress-bar { background: #ef4444; }
+    .toast-info .toast-progress-bar { background: #22d3ee; }
 
     @media (max-width: 768px) {
       .modal-content { flex-direction: column; align-items: center; max-height: 90vh; overflow-y: auto; padding: 16px; }
@@ -865,7 +1052,25 @@
     </div>
   </div>
 
-  <div class="toast" id="toast-msg">Thông báo</div>
+  <!-- MODERN CONFIRMATION DIALOG MODAL -->
+  <div class="confirm-overlay" id="confirm-modal" onclick="resolveConfirm(false)">
+    <div class="confirm-dialog-card" onclick="event.stopPropagation()">
+      <div class="confirm-icon-wrapper danger" id="confirm-dialog-icon">🗑️</div>
+      <h3 class="confirm-title" id="confirm-dialog-title">Xác Nhận Xóa Video</h3>
+      <p class="confirm-message" id="confirm-dialog-message">Bạn có chắc chắn muốn xóa video này không?</p>
+      <div class="confirm-btn-group">
+        <button type="button" class="btn-dialog-cancel" id="confirm-dialog-btn-cancel" onclick="resolveConfirm(false)">✕ Hủy Bỏ</button>
+        <button type="button" class="btn-dialog-confirm danger" id="confirm-dialog-btn-ok" onclick="resolveConfirm(true)">🗑️ Đồng Ý Xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODERN TOAST NOTIFICATION -->
+  <div class="toast-pill" id="toast-msg">
+    <span class="toast-icon-box" id="toast-icon">✨</span>
+    <span class="toast-text-box" id="toast-text">Thông báo hệ thống</span>
+    <div class="toast-progress-bar" id="toast-progress"></div>
+  </div>
 
   <script>
     // I18N DICTIONARY
@@ -966,6 +1171,13 @@
         // Toasts & Messages
         "toast.queueSuccess": "✅ Đã xếp hàng tạo video thành công!",
         "toast.queueError": "❌ Gửi yêu cầu thất bại: ",
+        "dialog.deleteTitle": "Xác Nhận Xóa Video",
+        "dialog.deleteMessage": "Bạn có chắc chắn muốn xóa video này không? Toàn bộ file video và dữ liệu sẽ bị xóa vĩnh viễn khỏi ổ cứng.",
+        "dialog.btnConfirmDelete": "🗑️ Đồng Ý Xóa",
+        "dialog.clearTitle": "Dọn Dẹp Danh Sách",
+        "dialog.clearMessage": "Bạn có chắc muốn dọn dẹp tất cả các video đã xong hoặc thất bại khỏi hàng đợi?",
+        "dialog.btnConfirmClear": "🧹 Dọn Dẹp Ngay",
+        "dialog.btnCancel": "✕ Hủy Bỏ",
         "toast.configSuccess": "✅ Đã lưu cấu hình hệ thống thành công!",
         "toast.configError": "❌ Lưu cấu hình thất bại: ",
         "toast.copySuccess": "📋 Đã sao chép caption vào clipboard!",
@@ -1069,6 +1281,13 @@
         // Toasts & Messages
         "toast.queueSuccess": "✅ Video job successfully queued!",
         "toast.queueError": "❌ Failed to submit job: ",
+        "dialog.deleteTitle": "Confirm Video Deletion",
+        "dialog.deleteMessage": "Are you sure you want to delete this video? All video files and media will be permanently deleted from disk.",
+        "dialog.btnConfirmDelete": "🗑️ Yes, Delete",
+        "dialog.clearTitle": "Clean Up Queue",
+        "dialog.clearMessage": "Are you sure you want to clear finished or failed videos from the queue?",
+        "dialog.btnConfirmClear": "🧹 Clean Up Now",
+        "dialog.btnCancel": "✕ Cancel",
         "toast.configSuccess": "✅ System settings saved successfully!",
         "toast.configError": "❌ Failed to save settings: ",
         "toast.copySuccess": "📋 Caption copied to clipboard!",
@@ -1308,33 +1527,93 @@
         .replace(/'/g, '&#039;');
     }
 
+    let confirmResolve = null;
+
+    function showConfirm({ title, message, confirmText, cancelText, type = 'danger' }) {
+      return new Promise((resolve) => {
+        confirmResolve = resolve;
+        const modal = document.getElementById('confirm-modal');
+        document.getElementById('confirm-dialog-title').innerText = title || t('dialog.deleteTitle');
+        document.getElementById('confirm-dialog-message').innerText = message || t('dialog.deleteMessage');
+        
+        const confirmBtn = document.getElementById('confirm-dialog-btn-ok');
+        const cancelBtn = document.getElementById('confirm-dialog-btn-cancel');
+        const iconEl = document.getElementById('confirm-dialog-icon');
+        
+        confirmBtn.innerText = confirmText || (type === 'danger' ? t('dialog.btnConfirmDelete') : t('dialog.btnConfirmClear'));
+        cancelBtn.innerText = cancelText || t('dialog.btnCancel');
+        
+        iconEl.className = 'confirm-icon-wrapper ' + type;
+        confirmBtn.className = 'btn-dialog-confirm ' + type;
+        
+        if (type === 'danger') iconEl.innerText = '🗑️';
+        else if (type === 'warning') iconEl.innerText = '⚠️';
+        else iconEl.innerText = '✨';
+        
+        modal.classList.add('open');
+      });
+    }
+
+    function resolveConfirm(result) {
+      const modal = document.getElementById('confirm-modal');
+      if (modal) modal.classList.remove('open');
+      if (confirmResolve) {
+        confirmResolve(result);
+        confirmResolve = null;
+      }
+    }
+
+    // Escape key closes modals
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        resolveConfirm(false);
+        closeModalDirect();
+      }
+    });
+
     async function handleDeleteJob(jobId) {
-      if (!confirm(t('queue.confirmDelete'))) return;
+      const confirmed = await showConfirm({
+        title: t('dialog.deleteTitle'),
+        message: t('dialog.deleteMessage'),
+        confirmText: t('dialog.btnConfirmDelete'),
+        cancelText: t('dialog.btnCancel'),
+        type: 'danger'
+      });
+      if (!confirmed) return;
+
       try {
         const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
         if (res.ok) {
-          showToast(t('toast.deleteSuccess'));
+          showToast(t('toast.deleteSuccess'), 'success');
           fetchJobs();
         } else {
-          showToast(t('toast.deleteError'));
+          showToast(t('toast.deleteError'), 'error');
         }
       } catch (err) {
-        showToast(t('toast.deleteError') + err.message);
+        showToast(t('toast.deleteError') + err.message, 'error');
       }
     }
 
     async function handleClearJobs(filter) {
-      if (!confirm(t('queue.confirmClear'))) return;
+      const confirmed = await showConfirm({
+        title: t('dialog.clearTitle'),
+        message: t('dialog.clearMessage'),
+        confirmText: t('dialog.btnConfirmClear'),
+        cancelText: t('dialog.btnCancel'),
+        type: 'warning'
+      });
+      if (!confirmed) return;
+
       try {
         const res = await fetch(`/api/jobs?filter=${filter || 'done'}`, { method: 'DELETE' });
         if (res.ok) {
-          showToast(t('toast.clearSuccess'));
+          showToast(t('toast.clearSuccess'), 'success');
           fetchJobs();
         } else {
-          showToast(t('toast.deleteError'));
+          showToast(t('toast.deleteError'), 'error');
         }
       } catch (err) {
-        showToast(t('toast.deleteError') + err.message);
+        showToast(t('toast.deleteError') + err.message, 'error');
       }
     }
 
@@ -1417,11 +1696,45 @@
       }
     }
 
-    function showToast(msg) {
+    let toastTimeout = null;
+
+    function showToast(msg, type = 'info') {
       const toast = document.getElementById('toast-msg');
-      toast.innerText = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3000);
+      const textEl = document.getElementById('toast-text');
+      const iconEl = document.getElementById('toast-icon');
+      const progressEl = document.getElementById('toast-progress');
+      if (!toast) return;
+
+      let icon = '✨';
+      let autoType = type;
+      if (msg.startsWith('✅') || msg.includes('thành công') || msg.includes('success')) {
+        autoType = 'success';
+        icon = '✅';
+      } else if (msg.startsWith('❌') || msg.includes('thất bại') || msg.includes('failed') || msg.includes('Lỗi')) {
+        autoType = 'error';
+        icon = '❌';
+      } else if (msg.startsWith('🗑️') || msg.startsWith('🧹')) {
+        autoType = 'success';
+        icon = msg.slice(0, 2);
+      }
+
+      toast.className = 'toast-pill show toast-' + autoType;
+      if (iconEl) iconEl.innerText = icon;
+      if (textEl) textEl.innerText = msg.replace(/^[✅❌📋🧹🗑️✨ℹ️\s]+/, '');
+
+      if (progressEl) {
+        progressEl.style.transition = 'none';
+        progressEl.style.width = '100%';
+        setTimeout(() => {
+          progressEl.style.transition = 'width 3.2s linear';
+          progressEl.style.width = '0%';
+        }, 15);
+      }
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3400);
     }
 
     // Auto-poll jobs every 3s
